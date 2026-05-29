@@ -7,6 +7,7 @@ import { useSprintStore } from "@/stores/useSprintStore";
 import { useProgressStore } from "@/stores/useProgressStore";
 import { useTelemetryStore } from "@/stores/useTelemetryStore";
 import { useSprintContext } from "@/hooks/useSprintContext";
+import { useArchetypeFlow } from "@/hooks/useArchetypeFlow";
 import type { SkillTaxonomyEntry } from "@/data/skills-taxonomy";
 
 interface Drill {
@@ -19,15 +20,15 @@ interface Drill {
 }
 
 /**
- * Build drills that match the skill's learning engine type.
- * NOT everything is a conversation — some skills need analysis, reflection, or decision drills.
+ * Build drills that match the skill's archetype.
+ * Each archetype uses a different drill style.
  */
 function buildDrills(skill: SkillTaxonomyEntry): Drill[] {
-  const engine = skill.learning_engine_type;
+  const archetype = skill.archetype;
 
-  // Drill templates by learning engine type
+  // Drill templates by archetype
   const drillGenerators: Record<string, (sub: { name: string; description: string }, i: number) => Drill> = {
-    simulation_based: (sub, i) => ({
+    conversational: (sub, i) => ({
       id: String(i + 1),
       microSkill: sub.name,
       type: "scenario",
@@ -35,15 +36,7 @@ function buildDrills(skill: SkillTaxonomyEntry): Drill[] {
       prompt: `In this situation, what would you do first, and why? What specific words would you choose? What outcome are you optimizing for?`,
       expectedBehavior: sub.description,
     }),
-    reflective_ai_mirror: (sub, i) => ({
-      id: String(i + 1),
-      microSkill: sub.name,
-      type: "reflection",
-      context: `Think of a recent situation where ${sub.name.toLowerCase()} was relevant — a time you handled it well, or wish you had handled it differently.`,
-      prompt: `Describe the situation briefly. What did you actually do? Looking back, what would you change? What does this tell you about your default patterns with ${sub.name.toLowerCase()}?`,
-      expectedBehavior: sub.description,
-    }),
-    structured_reasoning: (sub, i) => ({
+    analytical: (sub, i) => ({
       id: String(i + 1),
       microSkill: sub.name,
       type: "analysis",
@@ -51,41 +44,42 @@ function buildDrills(skill: SkillTaxonomyEntry): Drill[] {
       prompt: `Walk through how you would systematically apply ${sub.name.toLowerCase()} to evaluate this proposal. What questions would you ask? What frameworks would you use? Where would most people go wrong?`,
       expectedBehavior: sub.description,
     }),
-    consequence_simulation: (sub, i) => ({
-      id: String(i + 1),
-      microSkill: sub.name,
-      type: "decision",
-      context: `You're facing a decision with incomplete information. You have 3 options, each with different trade-offs. This tests your ${sub.name.toLowerCase()}.`,
-      prompt: `Option A: Act fast with limited data. Option B: Delay for more information. Option C: Delegate to someone closer to the problem. Which do you choose, and what's your reasoning? What are the second-order effects of each?`,
-      expectedBehavior: sub.description,
-    }),
-    recovery_conditioning: (sub, i) => ({
+    reflective: (sub, i) => ({
       id: String(i + 1),
       microSkill: sub.name,
       type: "reflection",
-      context: `Plans have changed suddenly — a project you were leading just lost half its budget and your timeline was cut by 3 weeks. This tests your ${sub.name.toLowerCase()}.`,
-      prompt: `What's your immediate internal reaction to this change? Now, separate your emotional response from your strategic response. What would you do in the next 24 hours? How do you communicate this to your team?`,
+      context: `Think of a recent situation where ${sub.name.toLowerCase()} was relevant — a time you handled it well, or wish you had handled it differently.`,
+      prompt: `Describe the situation briefly. What did you actually do? Looking back, what would you change? What does this tell you about your default patterns with ${sub.name.toLowerCase()}?`,
       expectedBehavior: sub.description,
     }),
-    cognitive_conflict: (sub, i) => ({
+    // Phase 2 stubs
+    creation: (sub, i) => ({
       id: String(i + 1),
       microSkill: sub.name,
-      type: "analysis",
-      context: `Your team is split 50/50 on a major decision. Both sides have compelling arguments. This requires ${sub.name.toLowerCase()}.`,
-      prompt: `Instead of picking a side, apply ${sub.name.toLowerCase()} to this deadlock. How would you reframe the problem? What perspective is neither side considering? What new option might emerge if you challenge the assumptions both groups share?`,
+      type: "scenario",
+      context: `A creation challenge for ${sub.name.toLowerCase()}.`,
+      prompt: `Describe how you would approach this.`,
       expectedBehavior: sub.description,
     }),
-    constraint_architecture: (sub, i) => ({
+    performance: (sub, i) => ({
+      id: String(i + 1),
+      microSkill: sub.name,
+      type: "scenario",
+      context: `A performance challenge for ${sub.name.toLowerCase()}.`,
+      prompt: `Describe how you would approach this.`,
+      expectedBehavior: sub.description,
+    }),
+    systems: (sub, i) => ({
       id: String(i + 1),
       microSkill: sub.name,
       type: "decision",
-      context: `You need to design a solution with severe constraints — limited time, limited budget, and a demanding stakeholder. This tests your ${sub.name.toLowerCase()}.`,
-      prompt: `How do you approach this? What trade-offs do you make first? How do you decide what to cut vs. what to protect? Walk through your reasoning, not just your answer.`,
+      context: `You need to design a solution with severe constraints — limited time, budget, and a demanding stakeholder. This tests your ${sub.name.toLowerCase()}.`,
+      prompt: `How do you approach this? What trade-offs do you make first? Walk through your reasoning.`,
       expectedBehavior: sub.description,
     }),
   };
 
-  const generator = drillGenerators[engine] || drillGenerators.simulation_based;
+  const generator = drillGenerators[archetype] || drillGenerators.conversational;
   return skill.sub_skills.slice(0, 6).map((sub, i) => generator(sub, i));
 }
 
@@ -98,7 +92,8 @@ const DRILL_TYPE_LABELS: Record<string, string> = {
 
 export default function DrillsPage() {
   const router = useRouter();
-  const { sprintId, skill, skillName, displayName, isSubSkillSprint, skillSlug, subSkillSlug } = useSprintContext();
+  const { sprintId, skill, skillName, displayName, isSubSkillSprint, skillSlug, subSkillSlug, archetype } = useSprintContext();
+  const flow = useArchetypeFlow(archetype);
   const { updateStage } = useSprintStore();
   const { setStage, addDrillScore } = useProgressStore();
   const { track } = useTelemetryStore();
@@ -115,6 +110,7 @@ export default function DrillsPage() {
     if (!skill) return;
     if (isSubSkillSprint) setStage(skillSlug, subSkillSlug, "drill");
     track({ type: "stage_enter", skillSlug, subSkillSlug, data: { stage: "drill" } });
+    // Use the new archetype-aware /drills endpoint
     api
       .get<{ drills: Drill[] }>(`/api/v1/sprint/content/drills?skill_id=${sprintId}`)
       .then((data) => {
@@ -212,8 +208,10 @@ export default function DrillsPage() {
       setTimerActive(true);
       setTimeout(() => inputRef.current?.focus(), 50);
     } else {
-      updateStage(sprintId, "guided-sim", 35);
-      router.push(`/dashboard/sprint/${sprintId}/simulation/guided`);
+      // Route to the next stage for this archetype
+      const nextUrl = flow.nextStageUrl("drills", sprintId);
+      updateStage(sprintId, "drills-complete", 35);
+      router.push(nextUrl);
     }
   };
 
@@ -351,7 +349,13 @@ export default function DrillsPage() {
 
           <div style={{ textAlign: "center" }}>
             <button className="btn btn-primary btn-lg" onClick={nextDrill} id="drill-next">
-              {currentDrill < drills.length - 1 ? "Next Drill →" : "Start Guided Simulation →"}
+              {currentDrill < drills.length - 1
+                ? "Next Drill →"
+                : archetype === "analytical"
+                  ? "Enter Reasoning Workspace →"
+                  : archetype === "reflective"
+                    ? "Begin Guided Reflection →"
+                    : "Start Guided Simulation →"}
             </button>
           </div>
         </div>

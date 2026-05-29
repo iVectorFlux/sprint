@@ -24,28 +24,47 @@ class SprintStatus(str, Enum):
 
 
 class StageType(str, Enum):
+    # Shared
     primer = "primer"
     micro_skills = "micro_skills"
     micro_drills = "micro_drills"
+    reflection = "reflection"
+    report = "report"
+    # Conversational engine
     guided_simulation = "guided_simulation"
     independent_simulation = "independent_simulation"
     replay_analysis = "replay_analysis"
-    reflection = "reflection"
     escalated_retry = "escalated_retry"
     final_assessment = "final_assessment"
-    report = "report"
     reinforcement = "reinforcement"
+    # Analytical engine
+    reasoning_workspace = "reasoning_workspace"
+    evidence_analysis = "evidence_analysis"
+    counterfactual_challenge = "counterfactual_challenge"
+    reasoning_assessment = "reasoning_assessment"
+    # Reflective engine
+    guided_reflection = "guided_reflection"
+    pattern_detection = "pattern_detection"
+    behavior_analysis = "behavior_analysis"
+    growth_plan = "growth_plan"
 
 
-class LearningEngineType(str, Enum):
-    simulation_based = "simulation_based"
-    structured_reasoning = "structured_reasoning"
-    consequence_simulation = "consequence_simulation"
-    stress_simulation = "stress_simulation"
-    reflective_ai_mirror = "reflective_ai_mirror"
-    recovery_conditioning = "recovery_conditioning"
-    cognitive_conflict = "cognitive_conflict"
-    constraint_architecture = "constraint_architecture"
+class SkillArchetype(str, Enum):
+    conversational = "conversational"
+    analytical = "analytical"
+    reflective = "reflective"
+    creation = "creation"
+    performance = "performance"
+    systems = "systems"
+
+
+class SessionEngine(str, Enum):
+    roleplay_engine = "roleplay_engine"
+    reasoning_engine = "reasoning_engine"
+    reflection_engine = "reflection_engine"
+    creation_engine = "creation_engine"
+    performance_engine = "performance_engine"
+    systems_engine = "systems_engine"
 
 
 # --- Response Schemas ---
@@ -55,7 +74,8 @@ class SkillResponse(BaseModel):
     name: str
     category: Optional[str] = None
     description: Optional[str] = None
-    learning_engine_type: LearningEngineType
+    archetype: SkillArchetype
+    session_engine: SessionEngine
     icon: Optional[str] = None
 
     class Config:

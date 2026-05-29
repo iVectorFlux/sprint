@@ -8,38 +8,218 @@ export type UserRole = 'learner' | 'manager' | 'admin' | 'super_admin'
 
 export type SprintStatus = 'not_started' | 'active' | 'paused' | 'completed' | 'abandoned'
 
+/**
+ * Phase 1 archetypes.
+ * Creation, performance, systems will be added in Phase 2.
+ */
+export type SkillArchetype =
+  | 'conversational' // Roleplay / dialogue / pushback / escalation
+  | 'analytical'     // Reasoning workspace / assumption mapping / counterfactuals
+  | 'reflective'     // Journaling / pattern detection / behavior analysis
+  | 'creation'       // Write / review / annotate / revise (Phase 2)
+  | 'performance'    // Record / transcribe / analyze / re-record (Phase 2)
+  | 'systems'        // Canvas / diagramming / dependency maps (Phase 2)
+
+export type SessionEngine =
+  | 'roleplay_engine'     // conversational
+  | 'reasoning_engine'    // analytical
+  | 'reflection_engine'   // reflective
+  | 'creation_engine'     // Phase 2
+  | 'performance_engine'  // Phase 2
+  | 'systems_engine'      // Phase 2
+
+// All possible stage keys across all archetypes
 export type StageType =
+  // Shared
   | 'primer'
   | 'micro_skills'
   | 'micro_drills'
+  | 'reflection'
+  | 'report'
+  // Conversational engine
   | 'guided_simulation'
   | 'independent_simulation'
   | 'replay_analysis'
-  | 'reflection'
   | 'escalated_retry'
   | 'final_assessment'
-  | 'report'
   | 'reinforcement'
+  // Analytical engine
+  | 'reasoning_workspace'
+  | 'evidence_analysis'
+  | 'counterfactual_challenge'
+  | 'reasoning_assessment'
+  // Reflective engine
+  | 'guided_reflection'
+  | 'pattern_detection'
+  | 'behavior_analysis'
+  | 'growth_plan'
 
 export type StageStatus = 'locked' | 'active' | 'completed' | 'skipped'
 
-export type LearningEngineType =
-  | 'simulation_based'
-  | 'structured_reasoning'
-  | 'consequence_simulation'
-  | 'stress_simulation'
-  | 'reflective_ai_mirror'
-  | 'recovery_conditioning'
-  | 'cognitive_conflict'
-  | 'constraint_architecture'
+// --- Archetype Stage Flows ---
+// Each archetype defines its own ordered stage sequence.
 
-export type SimulationType =
-  | 'roleplay'
-  | 'stress'
-  | 'reasoning'
-  | 'consequence'
-  | 'recovery'
-  | 'conflict'
+export const ARCHETYPE_STAGE_FLOWS: Record<SkillArchetype, StageType[]> = {
+  conversational: [
+    'primer',
+    'micro_skills',
+    'micro_drills',
+    'guided_simulation',
+    'independent_simulation',
+    'replay_analysis',
+    'reflection',
+    'escalated_retry',
+    'report',
+  ],
+  analytical: [
+    'primer',
+    'micro_skills',
+    'micro_drills',
+    'reasoning_workspace',
+    'evidence_analysis',
+    'counterfactual_challenge',
+    'reflection',
+    'reasoning_assessment',
+    'report',
+  ],
+  reflective: [
+    'primer',
+    'micro_skills',
+    'guided_reflection',
+    'pattern_detection',
+    'behavior_analysis',
+    'growth_plan',
+    'report',
+  ],
+  // Phase 2 stubs — will be expanded
+  creation: ['primer', 'micro_skills', 'report'],
+  performance: ['primer', 'micro_skills', 'report'],
+  systems: ['primer', 'micro_skills', 'report'],
+}
+
+// Stage → URL path segment mapping
+export const STAGE_URL_SEGMENT: Partial<Record<StageType, string>> = {
+  primer: 'primer',
+  micro_skills: 'micro-skills',
+  micro_drills: 'drills',
+  guided_simulation: 'simulation/guided',
+  independent_simulation: 'simulation/independent',
+  replay_analysis: 'replay',
+  reflection: 'reflection',
+  escalated_retry: 'simulation/escalated',
+  final_assessment: 'assessment',
+  report: 'report',
+  reinforcement: 'reinforcement',
+  reasoning_workspace: 'reasoning',
+  evidence_analysis: 'reasoning',   // same page, different mode
+  counterfactual_challenge: 'reasoning',
+  reasoning_assessment: 'assessment',
+  guided_reflection: 'guided-reflection',
+  pattern_detection: 'guided-reflection',
+  behavior_analysis: 'guided-reflection',
+  growth_plan: 'guided-reflection',
+}
+
+export const STAGE_LABELS: Record<StageType, string> = {
+  primer: 'Primer',
+  micro_skills: 'Micro-Skills',
+  micro_drills: 'Drills',
+  reflection: 'Reflection',
+  report: 'Report',
+  guided_simulation: 'Guided Sim',
+  independent_simulation: 'Independent Sim',
+  replay_analysis: 'Replay',
+  escalated_retry: 'Escalated',
+  final_assessment: 'Assessment',
+  reinforcement: 'Reinforcement',
+  reasoning_workspace: 'Reasoning',
+  evidence_analysis: 'Evidence',
+  counterfactual_challenge: 'Counterfactuals',
+  reasoning_assessment: 'Assessment',
+  guided_reflection: 'Reflection',
+  pattern_detection: 'Patterns',
+  behavior_analysis: 'Behavior',
+  growth_plan: 'Growth Plan',
+}
+
+// Stage nav items shown in the top bar per archetype
+export const ARCHETYPE_STAGE_NAV: Record<SkillArchetype, { key: string; label: string; icon: string }[]> = {
+  conversational: [
+    { key: 'primer', label: 'Primer', icon: '📖' },
+    { key: 'micro-skills', label: 'Micro-Skills', icon: '🧩' },
+    { key: 'drills', label: 'Drills', icon: '⚡' },
+    { key: 'simulation', label: 'Simulation', icon: '🎭' },
+    { key: 'replay', label: 'Replay', icon: '🔄' },
+    { key: 'reflection', label: 'Reflect', icon: '💭' },
+    { key: 'report', label: 'Report', icon: '📊' },
+  ],
+  analytical: [
+    { key: 'primer', label: 'Primer', icon: '📖' },
+    { key: 'micro-skills', label: 'Concepts', icon: '🧩' },
+    { key: 'drills', label: 'Drills', icon: '⚡' },
+    { key: 'reasoning', label: 'Workspace', icon: '🔬' },
+    { key: 'reflection', label: 'Reflect', icon: '💭' },
+    { key: 'assessment', label: 'Assessment', icon: '🏆' },
+    { key: 'report', label: 'Report', icon: '📊' },
+  ],
+  reflective: [
+    { key: 'primer', label: 'Primer', icon: '📖' },
+    { key: 'micro-skills', label: 'Concepts', icon: '🧩' },
+    { key: 'guided-reflection', label: 'Reflection', icon: '💭' },
+    { key: 'report', label: 'Report', icon: '📊' },
+  ],
+  creation: [
+    { key: 'primer', label: 'Primer', icon: '📖' },
+    { key: 'micro-skills', label: 'Concepts', icon: '🧩' },
+    { key: 'report', label: 'Report', icon: '📊' },
+  ],
+  performance: [
+    { key: 'primer', label: 'Primer', icon: '📖' },
+    { key: 'micro-skills', label: 'Concepts', icon: '🧩' },
+    { key: 'report', label: 'Report', icon: '📊' },
+  ],
+  systems: [
+    { key: 'primer', label: 'Primer', icon: '📖' },
+    { key: 'micro-skills', label: 'Concepts', icon: '🧩' },
+    { key: 'report', label: 'Report', icon: '📊' },
+  ],
+}
+
+export const ARCHETYPE_LABELS: Record<SkillArchetype, string> = {
+  conversational: 'Conversational',
+  analytical: 'Analytical',
+  reflective: 'Reflective',
+  creation: 'Creation',
+  performance: 'Performance',
+  systems: 'Systems',
+}
+
+export const ARCHETYPE_DESCRIPTIONS: Record<SkillArchetype, string> = {
+  conversational: 'Live dialogue roleplay with AI characters — pushback, escalation, and coaching',
+  analytical: 'Structured reasoning workspace — assumptions, evidence, and counterfactual thinking',
+  reflective: 'Guided journaling and pattern detection — understand your own behavioral patterns',
+  creation: 'Write, review, annotate, revise — deliberate creation practice (coming soon)',
+  performance: 'Record, transcribe, analyze, re-record — delivery and presence practice (coming soon)',
+  systems: 'Canvas diagramming, dependency maps, constraint injection (coming soon)',
+}
+
+export const ARCHETYPE_ICONS: Record<SkillArchetype, string> = {
+  conversational: '🎭',
+  analytical: '🔬',
+  reflective: '🪞',
+  creation: '✍️',
+  performance: '🎤',
+  systems: '🗺️',
+}
+
+export const SESSION_ENGINE_LABELS: Record<SessionEngine, string> = {
+  roleplay_engine: 'Roleplay Engine',
+  reasoning_engine: 'Reasoning Engine',
+  reflection_engine: 'Reflection Engine',
+  creation_engine: 'Creation Engine',
+  performance_engine: 'Performance Engine',
+  systems_engine: 'Systems Engine',
+}
 
 // --- Core Entities ---
 
@@ -94,7 +274,8 @@ export interface Skill {
   name: string
   category: string | null
   description: string | null
-  learning_engine_type: LearningEngineType
+  archetype: SkillArchetype
+  session_engine: SessionEngine
   icon: string | null
   created_at: string
 }
@@ -146,7 +327,9 @@ export interface SprintStage {
   completed_at: string | null
 }
 
-// --- Simulations ---
+// --- Simulations (Conversational Engine) ---
+
+export type SimulationType = 'roleplay' | 'stress' | 'reasoning' | 'consequence' | 'recovery' | 'conflict'
 
 export interface Simulation {
   id: string
@@ -221,45 +404,4 @@ export interface NavItem {
   href: string
   icon: string
   badge?: number
-}
-
-// --- Stage metadata ---
-
-export const STAGE_ORDER: StageType[] = [
-  'primer',
-  'micro_skills',
-  'micro_drills',
-  'guided_simulation',
-  'independent_simulation',
-  'replay_analysis',
-  'reflection',
-  'escalated_retry',
-  'final_assessment',
-  'report',
-  'reinforcement',
-]
-
-export const STAGE_LABELS: Record<StageType, string> = {
-  primer: 'Primer',
-  micro_skills: 'Micro-Skills',
-  micro_drills: 'Micro Drills',
-  guided_simulation: 'Guided Simulation',
-  independent_simulation: 'Independent Simulation',
-  replay_analysis: 'Replay Analysis',
-  reflection: 'Reflection',
-  escalated_retry: 'Escalated Retry',
-  final_assessment: 'Final Assessment',
-  report: 'Report',
-  reinforcement: 'Reinforcement Loop',
-}
-
-export const ENGINE_TYPE_LABELS: Record<LearningEngineType, string> = {
-  simulation_based: 'Simulation-Based',
-  structured_reasoning: 'Structured Reasoning',
-  consequence_simulation: 'Consequence Simulation',
-  stress_simulation: 'Stress Simulation',
-  reflective_ai_mirror: 'Reflective AI Mirror',
-  recovery_conditioning: 'Recovery Conditioning',
-  cognitive_conflict: 'Cognitive Conflict',
-  constraint_architecture: 'Constraint Architecture',
 }

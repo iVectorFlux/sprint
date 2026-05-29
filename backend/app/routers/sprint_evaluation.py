@@ -13,6 +13,7 @@ from app.ai.prompts import (
     reflection_analysis_prompt,
     report_generation_prompt,
 )
+from app.ai.archetypes import archetype_from_skill
 
 router = APIRouter()
 
@@ -156,8 +157,10 @@ async def get_report(
     user_ctx = await _get_user_context(user_id)
 
     skill_name = "Communication"
+    archetype = "conversational"
     if sprint.get("skills"):
         skill_name = sprint["skills"].get("name", skill_name)
+        archetype = archetype_from_skill(sprint["skills"])
 
     supabase = get_supabase()
 
@@ -182,8 +185,8 @@ async def get_report(
         )
         evaluations = [a.get("evaluation", {}) for a in (attempts.data or []) if a.get("evaluation")]
 
-    # Generate AI report
-    system, user = report_generation_prompt(skill_name, evaluations, [], user_ctx)
+    # Generate AI report (archetype-aware dimensions)
+    system, user = report_generation_prompt(skill_name, evaluations, [], user_ctx, archetype)
     report = await chat_completion_json(system, user, temperature=0.6, max_tokens=3000)
 
     if not report.get("readiness_score"):

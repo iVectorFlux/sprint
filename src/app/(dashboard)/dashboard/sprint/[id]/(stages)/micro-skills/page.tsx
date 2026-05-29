@@ -23,7 +23,7 @@ interface MicroSkill {
  * Content varies by skill category & learning engine type.
  */
 function buildMicroSkills(skill: SkillTaxonomyEntry): MicroSkill[] {
-  const engine = skill.learning_engine_type;
+  const archetype = skill.archetype;
   const category = skill.category;
 
   return skill.sub_skills.map((sub, i) => {
@@ -37,15 +37,14 @@ function buildMicroSkills(skill: SkillTaxonomyEntry): MicroSkill[] {
       "Business Skills": `In revenue-driving roles, ${sub.name.toLowerCase()} is the difference between transactional interactions and strategic partnerships. Mastering it creates compounding value over time.`,
     };
 
-    // Generate contextual "how to apply" based on learning engine type
+    // Generate contextual "how to apply" based on archetype
     const howContexts: Record<string, string> = {
-      simulation_based: `Practice this through realistic role-play scenarios. Start by observing what ${sub.name.toLowerCase()} looks like in action, then try applying it in low-stakes situations. Pay attention to how others respond differently when you use it deliberately versus when you don't.`,
-      reflective_ai_mirror: `Build this through structured self-reflection. After any significant interaction, ask yourself: "How did I apply ${sub.name.toLowerCase()} here? What would I do differently?" Track your patterns over time — the goal is to move from unconscious habit to conscious choice.`,
-      structured_reasoning: `Develop this through deliberate analysis exercises. When facing problems or decisions, explicitly apply ${sub.name.toLowerCase()} as a distinct step in your process. Over time, it becomes a natural part of how you think, not an extra effort.`,
-      consequence_simulation: `Practice this by running mental simulations. Before making decisions, ask: "If I apply ${sub.name.toLowerCase()} here, what happens next? What about in 2 weeks? 6 months?" The goal is to develop the habit of thinking through downstream effects.`,
-      recovery_conditioning: `Build this through progressive exposure. Start with mild challenges that require ${sub.name.toLowerCase()}, then gradually increase the complexity and pressure. The key is building your capacity, not testing your limits all at once.`,
-      cognitive_conflict: `Develop this by deliberately seeking perspectives that challenge your default thinking. When you feel certain about something, that's exactly when to pause and apply ${sub.name.toLowerCase()} — ask what you might be missing.`,
-      constraint_architecture: `Practice this within deliberately limited environments. Constraints actually improve ${sub.name.toLowerCase()} because they force you to be creative and systematic rather than defaulting to the first approach that comes to mind.`,
+      conversational: `Practice this through realistic role-play scenarios. Start by observing what ${sub.name.toLowerCase()} looks like in action, then try applying it in low-stakes situations. Pay attention to how others respond differently when you use it deliberately versus when you don't.`,
+      reflective: `Build this through structured self-reflection. After any significant interaction, ask yourself: "How did I apply ${sub.name.toLowerCase()} here? What would I do differently?" Track your patterns over time — the goal is to move from unconscious habit to conscious choice.`,
+      analytical: `Develop this through deliberate analysis exercises. When facing problems or decisions, explicitly apply ${sub.name.toLowerCase()} as a distinct step in your process. Over time, it becomes a natural part of how you think, not an extra effort.`,
+      creation: `Develop this through deliberate creation practice. Draft → get feedback → revise. The key is to produce work, expose it to critique, and iterate systematically.`,
+      performance: `Build this through progressive exposure. Start with mild challenges that require ${sub.name.toLowerCase()}, then gradually increase the complexity and pressure.`,
+      systems: `Practice this within deliberately limited environments. Constraints actually improve ${sub.name.toLowerCase()} because they force you to be creative and systematic rather than defaulting to the first approach.`,
     };
 
     // Generate contextual "common mistake" based on sub-skill
@@ -65,7 +64,7 @@ function buildMicroSkills(skill: SkillTaxonomyEntry): MicroSkill[] {
       name: sub.name,
       whatItIs: sub.description + ` At difficulty level ${sub.difficulty_level}/5, this is ${sub.difficulty_level <= 2 ? "one of the more accessible skills to start building" : sub.difficulty_level <= 3 ? "a moderately challenging skill that requires consistent practice" : "an advanced capability that takes significant deliberate effort to develop"}.`,
       whyItMatters: whyContexts[category] || whyContexts["Human Skills"],
-      howToApply: howContexts[engine] || howContexts["simulation_based"],
+      howToApply: howContexts[archetype] || howContexts["conversational"],
       commonMistake: commonMistakes[sub.name] || mistakeByDifficulty[Math.min(sub.difficulty_level, 5)] || mistakeByDifficulty[3],
     };
   });

@@ -1,6 +1,12 @@
 import Link from "next/link";
 import { SKILLS_TAXONOMY } from "@/data/skills-taxonomy";
-import { STAGE_ORDER, STAGE_LABELS, ENGINE_TYPE_LABELS } from "@/types";
+import {
+  STAGE_LABELS,
+  ARCHETYPE_ICONS,
+  ARCHETYPE_LABELS,
+  ARCHETYPE_DESCRIPTIONS,
+  ARCHETYPE_STAGE_FLOWS,
+} from "@/types";
 import BeginSprintButton from "@/components/sprint/BeginSprintButton";
 
 function toSlug(name: string): string {
@@ -47,6 +53,14 @@ export default async function SprintDetailPage({
   const isSubSkillSprint = !!subSkill;
   const displayName = subSkill?.name || skill.name;
 
+  // Archetype-specific stage flow
+  const stageFlow = ARCHETYPE_STAGE_FLOWS[skill.archetype];
+  const archetypeIcon = ARCHETYPE_ICONS[skill.archetype];
+  const archetypeLabel = ARCHETYPE_LABELS[skill.archetype];
+
+  // Phase 2 check
+  const isPhase2 = ["creation", "performance", "systems"].includes(skill.archetype);
+
   return (
     <div style={{ maxWidth: 800 }}>
       {/* Breadcrumb */}
@@ -59,7 +73,7 @@ export default async function SprintDetailPage({
           <>
             <span style={{ color: "var(--text-muted)", fontSize: 13 }}>{skill.name}</span>
             <span className="topbar-breadcrumb-separator">/</span>
-            <span style={{ color: "var(--text-heading)", fontSize: 13 }}>{subSkill.name}</span>
+            <span style={{ color: "var(--text-heading)", fontSize: 13 }}>{subSkill!.name}</span>
           </>
         ) : (
           <span style={{ color: "var(--text-heading)", fontSize: 13 }}>{skill.name}</span>
@@ -71,11 +85,8 @@ export default async function SprintDetailPage({
         <div className="flex-row" style={{ marginBottom: 12, gap: 16 }}>
           <div
             style={{
-              width: 56,
-              height: 56,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
+              width: 56, height: 56,
+              display: "flex", alignItems: "center", justifyContent: "center",
               backgroundColor: "var(--primary-fixed)",
               fontSize: 30,
             }}
@@ -91,25 +102,35 @@ export default async function SprintDetailPage({
                 <span className="chip">{skill.name}</span>
               )}
               <span className="chip">{skill.category}</span>
-              <span className="chip chip-primary">
-                {ENGINE_TYPE_LABELS[skill.learning_engine_type]}
+              {/* Archetype badge */}
+              <span className="archetype-badge" title={ARCHETYPE_DESCRIPTIONS[skill.archetype]}>
+                {archetypeIcon} {archetypeLabel}
               </span>
               {subSkill && (
                 <span className="chip">
                   Difficulty {"●".repeat(subSkill.difficulty_level)}{"○".repeat(5 - subSkill.difficulty_level)}
                 </span>
               )}
+              {isPhase2 && (
+                <span className="chip" style={{ backgroundColor: "var(--warning-light)", color: "var(--warning)" }}>
+                  Coming Soon
+                </span>
+              )}
             </div>
           </div>
         </div>
         <p className="body-reading" style={{ maxWidth: 640 }}>
-          {subSkill
-            ? subSkill.description
-            : skill.description}
+          {subSkill ? subSkill.description : skill.description}
         </p>
+
+        {/* Archetype description */}
+        <div className="guidance-box guidance-box-accent" style={{ marginTop: 16 }}>
+          <div className="guidance-box-title">{archetypeIcon} {archetypeLabel} practice format</div>
+          <div className="guidance-box-text">{ARCHETYPE_DESCRIPTIONS[skill.archetype]}</div>
+        </div>
       </section>
 
-      {/* Sub-skill specific: what you'll practice */}
+      {/* What you'll practice (sub-skill sprint) */}
       {isSubSkillSprint && (
         <section style={{ marginBottom: "var(--stack-md)" }}>
           <div className="card" style={{ padding: "20px 24px" }}>
@@ -117,12 +138,11 @@ export default async function SprintDetailPage({
               What you&apos;ll practice
             </h3>
             <p className="body-ui" style={{ lineHeight: 1.7, marginBottom: 16 }}>
-              This sprint focuses specifically on <strong>{subSkill.name}</strong> as part of the broader {skill.name} competency.
-              You&apos;ll go through an 11-stage flow designed to build this micro-skill from understanding to mastery.
+              This sprint focuses specifically on <strong>{subSkill!.name}</strong> as part of the broader {skill.name} competency.
+              You&apos;ll go through a {stageFlow.length}-stage flow tailored to the {archetypeLabel.toLowerCase()} practice format.
             </p>
             <div className="body-sm">
-              The AI will generate scenarios, drills, and simulations tailored to {subSkill.name.toLowerCase()}.
-              Your performance is tracked and contributes to your overall {skill.name.toLowerCase()} progress.
+              The AI will generate {archetypeLabel.toLowerCase() === 'conversational' ? 'roleplay scenarios, drills, and simulations' : archetypeLabel.toLowerCase() === 'analytical' ? 'reasoning challenges, structured exercises, and analysis tasks' : 'reflection prompts, pattern detection, and a growth plan'} tailored to {subSkill!.name.toLowerCase()}.
             </div>
           </div>
         </section>
@@ -152,18 +172,18 @@ export default async function SprintDetailPage({
         </div>
       </section>
 
-      {/* Sprint Structure */}
+      {/* Sprint Structure — Archetype-specific stages */}
       <section style={{ marginBottom: "var(--stack-md)" }}>
         <h3 className="headline-sm" style={{ marginBottom: 16 }}>
-          Sprint structure
+          Sprint structure <span style={{ fontWeight: 400, fontSize: 15, color: "var(--text-muted)" }}>({archetypeLabel})</span>
         </h3>
         <div className="card" style={{ padding: 20 }}>
           <div className="sprint-timeline">
-            {STAGE_ORDER.map((stage, i) => (
+            {stageFlow.map((stage, i) => (
               <div key={stage} className="sprint-stage">
                 <div className="sprint-stage-indicator">
                   <div className="sprint-stage-dot" />
-                  {i < STAGE_ORDER.length - 1 && (
+                  {i < stageFlow.length - 1 && (
                     <div className="sprint-stage-line" />
                   )}
                 </div>
@@ -204,25 +224,32 @@ export default async function SprintDetailPage({
               marginBottom: 4,
             }}
           >
-            Ready to begin?
+            {isPhase2 ? "Coming in Phase 2" : "Ready to begin?"}
           </div>
           <div className="body-sm">
-            {isSubSkillSprint
-              ? `Start your sprint for ${subSkill.name} (part of ${skill.name}).`
-              : `Start your transformation sprint for ${skill.name}.`}
+            {isPhase2
+              ? `The ${archetypeLabel} engine is being built. Choose a Conversational, Analytical, or Reflective skill for now.`
+              : isSubSkillSprint
+                ? `Start your ${archetypeLabel.toLowerCase()} sprint for ${subSkill!.name} (part of ${skill.name}).`
+                : `Start your ${archetypeLabel.toLowerCase()} transformation sprint for ${skill.name}.`}
           </div>
         </div>
-        <BeginSprintButton skillSlug={id} skillName={displayName} />
+        {!isPhase2 && <BeginSprintButton skillSlug={id} skillName={displayName} />}
+        {isPhase2 && (
+          <Link href="/dashboard/catalog" className="btn btn-ghost btn-sm">
+            Browse other skills
+          </Link>
+        )}
       </section>
 
-      {/* Guidance */}
+      {/* How it works */}
       <div className="guidance-box" style={{ marginTop: "var(--stack-sm)" }}>
-        <div className="guidance-box-title">How sprints work</div>
+        <div className="guidance-box-title">How {archetypeLabel.toLowerCase()} sprints work</div>
         <div className="guidance-box-text">
-          Each sprint follows an 11-stage adaptive learning flow: from foundational primers
-          through guided simulations, independent practice, and final assessments. The AI
-          adapts difficulty, scenarios, and feedback based on your performance. Your progress
-          is saved and mapped to the parent skill.
+          {skill.archetype === "conversational" && "You'll practice through live AI roleplay — the AI plays a realistic character who pushes back, escalates, and reacts to your responses. Each simulation is scored across 7 dimensions."}
+          {skill.archetype === "analytical" && "You'll work through structured reasoning challenges: mapping assumptions, evaluating evidence, and tackling counterfactuals. This is a written workspace, not a chat — depth of analysis is what's scored."}
+          {skill.archetype === "reflective" && "You'll reflect on real past situations through guided journal prompts. The AI detects your behavioral and emotional patterns across entries, then generates a personalized 30-day growth plan."}
+          {["creation", "performance", "systems"].includes(skill.archetype) && "This archetype's session engine is being built. It will be available in Phase 2."}
         </div>
       </div>
     </div>
