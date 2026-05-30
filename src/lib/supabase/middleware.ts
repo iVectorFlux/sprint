@@ -29,10 +29,16 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  // Refresh the auth token
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  // Refresh the auth token safely
+  let user = null;
+  try {
+    const {
+      data: { user: authUser },
+    } = await supabase.auth.getUser();
+    user = authUser;
+  } catch (err) {
+    console.warn('Middleware Supabase auth getUser failed (offline/unseeded fallback):', err);
+  }
 
   const pathname = request.nextUrl.pathname
 
@@ -57,34 +63,42 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Authenticated users on dashboard → check onboarding status
+  // Authenticated users on dashboard → check onboarding status safely
   if (user && !isAuthPage && !isPublicPage && !isOnboardingPage) {
-    // Check if user has completed onboarding
-    const { data: userData } = await supabase
-      .from('users')
-      .select('onboarding_completed')
-      .eq('id', user.id)
-      .single()
+    try {
+      // Check if user has completed onboarding
+      const { data: userData } = await supabase
+        .from('users')
+        .select('onboarding_completed')
+        .eq('id', user.id)
+        .single()
 
-    if (userData && !userData.onboarding_completed) {
-      const url = request.nextUrl.clone()
-      url.pathname = '/onboarding'
-      return NextResponse.redirect(url)
+      if (userData && !userData.onboarding_completed) {
+        const url = request.nextUrl.clone()
+        url.pathname = '/onboarding'
+        return NextResponse.redirect(url)
+      }
+    } catch (err) {
+      console.warn('Middleware onboarding check failed (offline/unseeded fallback):', err);
     }
   }
 
-  // Users who completed onboarding shouldn't see onboarding again
+  // Users who completed onboarding shouldn't see onboarding again safely
   if (user && isOnboardingPage) {
-    const { data: userData } = await supabase
-      .from('users')
-      .select('onboarding_completed')
-      .eq('id', user.id)
-      .single()
+    try {
+      const { data: userData } = await supabase
+        .from('users')
+        .select('onboarding_completed')
+        .eq('id', user.id)
+        .single()
 
-    if (userData && userData.onboarding_completed) {
-      const url = request.nextUrl.clone()
-      url.pathname = '/dashboard'
-      return NextResponse.redirect(url)
+      if (userData && userData.onboarding_completed) {
+        const url = request.nextUrl.clone()
+        url.pathname = '/dashboard'
+        return NextResponse.redirect(url)
+      }
+    } catch (err) {
+      console.warn('Middleware onboarding verify check failed (offline/unseeded fallback):', err);
     }
   }
 
