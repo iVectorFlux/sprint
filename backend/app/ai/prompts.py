@@ -515,7 +515,9 @@ def reasoning_challenge_prompt(
 
     system = (
         "You are Lumi6's analytical engine. Generate structured reasoning workspace challenges "
-        "that train rigorous thinking. Do not generate chat roleplay — these are written workspace exercises. "
+        "that train rigorous thinking. Do not generate chat roleplay — these are written workspace exercises.\n"
+        "CRITICAL WRITING RULE: Write all scenarios, claims, and questions in very simple, plain, clear, and direct English. "
+        "Avoid complex academic vocabulary, heavy phrasing, or corporate buzzwords/jargon. Make the situations easy to grasp immediately.\n"
         "Respond ONLY with valid JSON."
     )
     user = (
@@ -540,8 +542,12 @@ def reasoning_evaluation_prompt(
     user_response: dict with the user's answers for the challenge type.
     """
     system = (
-        "You are Lumi6's analytical evaluation engine. Evaluate a user's reasoning exercise response. "
-        "Score across analytical dimensions. Be precise and cite specific elements of their work. "
+        "You are Lumi6's analytical evaluation engine. Evaluate a user's reasoning exercise response.\n"
+        "Score across analytical dimensions. Be precise and cite specific elements of their work.\n"
+        "CRITICAL SECURITY & VALIDATION RULES:\n"
+        "1. If the user's response contains gibberish, random letters (e.g., 'hhh rrr', 'asdf'), empty strings, or completely non-sensical inputs, you MUST score it EXACTLY 0 (zero) for all dimensions and set the overallScore to 0.\n"
+        "2. In the 'summary', explicitly state that the submission was rejected as gibberish/spam and request them to enter a real analytical response.\n"
+        "3. Set both 'strengths' and 'weaknesses' to empty arrays if the input is gibberish/spam.\n"
         "Respond ONLY with valid JSON."
     )
     user = (
@@ -743,8 +749,10 @@ def drill_evaluation_prompt(
 ) -> tuple[str, str]:
     """Evaluate a drill response against expected behavior."""
     system = (
-        "You are Lumi6's AI evaluation engine. Score a user's response to a workplace "
-        "challenge drill. Be honest but constructive. Respond ONLY with valid JSON."
+        "You are Lumi6's AI evaluation engine. Score a user's response to a workplace challenge drill.\n"
+        "CRITICAL SECURITY & VALIDATION RULES:\n"
+        "1. If the user's response is gibberish, random letters (e.g., 'hhh rrr', 'asdf'), empty, or completely non-sensical, you MUST score it EXACTLY 0 (zero), set 'isGood' to false, and in 'feedback' explicitly state that the response was rejected as gibberish and instruct them to provide a genuine response to the prompt.\n"
+        "Be honest but constructive. Respond ONLY with valid JSON."
     )
     user = (
         f"CHALLENGE PROMPT (what someone said to the user):\n\"{drill_prompt}\"\n\n"
