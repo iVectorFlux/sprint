@@ -213,8 +213,11 @@ def drills_prompt(
     }.get(archetype, {"type": "scenario", "type_label": "Challenge", "instruction": ""})
 
     system = (
-        "You are Lumi6, an AI-native learning platform. Generate focused practice drills "
-        "for workplace skills. Each drill should challenge a specific micro-skill. "
+        "You are Lumi6, an AI-native learning platform. Generate focused, highly concrete practice drills "
+        "for workplace skills. Each drill should challenge a specific micro-skill.\n"
+        "CRITICAL RULES:\n"
+        "1. Every drill's 'context' MUST be a highly specific, concrete, realistic workplace scenario or situation (e.g., specific conversations, product metrics, launch details, team disagreements). NEVER use generic or abstract templates like 'You are analyzing a complex problem that requires X.'\n"
+        "2. Every drill's 'prompt' MUST end with a practical, helpful hint or tip formatted exactly as: '\\n\\n💡 Hint: [actionable guidance on how to think about or solve this challenge].'\n"
         "Respond ONLY with valid JSON."
     )
     
