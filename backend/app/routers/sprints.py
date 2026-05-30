@@ -1,5 +1,6 @@
 """Sprints API router."""
 
+from typing import Optional
 from fastapi import APIRouter, HTTPException, Header
 from app.db import get_supabase
 from app.schemas import SprintResponse, CreateSprintRequest, StageType
@@ -22,13 +23,16 @@ STAGE_ORDER = [
 ]
 
 
-@router.get("/", response_model=list[SprintResponse])
-async def list_sprints(authorization: str = Header(...)):
+@router.get("", response_model=list[SprintResponse])
+async def list_sprints(authorization: Optional[str] = Header(None)):
     """List sprints for the authenticated user."""
     supabase = get_supabase()
+    if not supabase or not authorization:
+        return []
 
     # Verify user from JWT
-    user = supabase.auth.get_user(authorization.replace("Bearer ", ""))
+    token = authorization.replace("Bearer ", "")
+    user = supabase.auth.get_user(token)
     if not user or not user.user:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
@@ -42,16 +46,28 @@ async def list_sprints(authorization: str = Header(...)):
     return result.data
 
 
-@router.post("/", response_model=SprintResponse)
+@router.post("", response_model=SprintResponse)
 async def create_sprint(
     body: CreateSprintRequest,
-    authorization: str = Header(...),
+    authorization: Optional[str] = Header(None),
 ):
     """Create a new sprint for a skill."""
     supabase = get_supabase()
+    if not supabase or not authorization:
+        skill_name = body.skill_id.replace("-", " ").title()
+        return {
+            "id": "mock-sprint-id",
+            "user_id": "mock-user-id",
+            "primary_skill_id": body.skill_id,
+            "title": body.title or f"{skill_name} Sprint",
+            "status": "not_started",
+            "current_stage": "primer",
+            "target_hours": 20,
+        }
 
     # Verify user
-    user = supabase.auth.get_user(authorization.replace("Bearer ", ""))
+    token = authorization.replace("Bearer ", "")
+    user = supabase.auth.get_user(token)
     if not user or not user.user:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
@@ -88,11 +104,24 @@ async def create_sprint(
 
 
 @router.get("/{sprint_id}", response_model=SprintResponse)
-async def get_sprint(sprint_id: str, authorization: str = Header(...)):
+async def get_sprint(sprint_id: str, authorization: Optional[str] = Header(None)):
     """Get a specific sprint."""
     supabase = get_supabase()
+    if not supabase or not authorization:
+        actual_skill_id = sprint_id.split("--")[0] if "--" in sprint_id else sprint_id
+        skill_name = actual_skill_id.replace("-", " ").title()
+        return {
+            "id": sprint_id,
+            "user_id": "mock-user-id",
+            "primary_skill_id": actual_skill_id,
+            "title": f"{skill_name} Sprint",
+            "status": "active",
+            "current_stage": "primer",
+            "target_hours": 20,
+        }
 
-    user = supabase.auth.get_user(authorization.replace("Bearer ", ""))
+    token = authorization.replace("Bearer ", "")
+    user = supabase.auth.get_user(token)
     if not user or not user.user:
         raise HTTPException(status_code=401, detail="Unauthorized")
 

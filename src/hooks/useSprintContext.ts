@@ -15,7 +15,7 @@
 
 import { useMemo } from 'react'
 import { useParams } from 'next/navigation'
-import { SKILLS_TAXONOMY, type SkillTaxonomyEntry } from '@/data/skills-taxonomy'
+import { SKILLS_TAXONOMY, type SkillTaxonomyEntry, type SubSkillEntry, type AtomicSkill } from '@/data/skills-taxonomy'
 import type { SkillArchetype, SessionEngine } from '@/types'
 
 /** Slugify a name for URL matching */
@@ -23,11 +23,7 @@ export function toSlug(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 }
 
-export interface SubSkillEntry {
-  name: string
-  description: string
-  difficulty_level: number
-}
+export type { SubSkillEntry, AtomicSkill }
 
 export interface SprintContext {
   /** Raw URL parameter */

@@ -106,11 +106,7 @@ export default async function SprintDetailPage({
               <span className="archetype-badge" title={ARCHETYPE_DESCRIPTIONS[skill.archetype]}>
                 {archetypeIcon} {archetypeLabel}
               </span>
-              {subSkill && (
-                <span className="chip">
-                  Difficulty {"●".repeat(subSkill.difficulty_level)}{"○".repeat(5 - subSkill.difficulty_level)}
-                </span>
-              )}
+
               {isPhase2 && (
                 <span className="chip" style={{ backgroundColor: "var(--warning-light)", color: "var(--warning)" }}>
                   Coming Soon
@@ -149,21 +145,13 @@ export default async function SprintDetailPage({
       )}
 
       {/* Quick Stats */}
-      <section className="grid-3" style={{ marginBottom: "var(--stack-md)" }}>
+      <section className="grid-2" style={{ marginBottom: "var(--stack-md)" }}>
         <div className="card stat-card">
           <div className="stat-card-label">
             {isSubSkillSprint ? "Parent skill" : "Sub-skills"}
           </div>
           <div className="stat-card-value">
             {isSubSkillSprint ? skill.name : skill.sub_skills.length}
-          </div>
-        </div>
-        <div className="card stat-card">
-          <div className="stat-card-label">Difficulty</div>
-          <div className="stat-card-value">
-            {subSkill
-              ? `${subSkill.difficulty_level}/5`
-              : `${(skill.sub_skills.reduce((a, s) => a + s.difficulty_level, 0) / skill.sub_skills.length).toFixed(1)}/5`}
           </div>
         </div>
         <div className="card stat-card">

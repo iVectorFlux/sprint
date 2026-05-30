@@ -251,10 +251,7 @@ export default function CatalogPage() {
                           </div>
                         </div>
 
-                        {/* Difficulty */}
-                        <div className="body-sm" style={{ fontSize: 11, flexShrink: 0 }}>
-                          {'●'.repeat(sub.difficulty_level)}{'○'.repeat(5 - sub.difficulty_level)}
-                        </div>
+
 
                         {/* Action button */}
                         <Link

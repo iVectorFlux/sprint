@@ -27,7 +27,7 @@ export default function GuidedSimulationPage() {
 
   useEffect(() => {
     api
-      .get<{ scenarios: Scenario[] }>("/api/v1/sprint/content/scenarios")
+      .get<{ scenarios: Scenario[] }>(`/api/v1/sprint/content/scenarios?skill_id=${sprintId}`)
       .then((data) => setScenarios(data.scenarios))
       .catch(() => {
         setScenarios([
@@ -36,7 +36,7 @@ export default function GuidedSimulationPage() {
           { id: "s3", title: "Budget Cut Negotiation", difficulty: "hard", context: "Leadership wants to cut your team's budget by 30%. You need to negotiate to keep critical resources while showing fiscal responsibility.", aiCharacterName: "Dr. Elena Torres" },
         ]);
       });
-  }, []);
+  }, [sprintId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });

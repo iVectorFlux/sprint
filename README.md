@@ -1,42 +1,73 @@
 # Lumi6 Skill Lab
 
-An AI-native learning platform that builds human competencies through simulation-based practice. Unlike traditional courses, Lumi6 doesn't teach through videos or readings — it creates personalized, adaptive scenarios where learners practice real skills in realistic contexts, with AI coaching them in real time.
+An AI-native platform for **building human competencies through deliberate practice**—not passive courses. Learners work through skill sprints with realistic scenarios, structured reasoning, and reflection, with AI coaching where the skill demands live interaction.
 
-## What it does
+## Product direction
 
-Lumi6 takes a learner through an 11-stage sprint for each skill they want to develop:
+Lumi6 is evolving along two tracks (see **[futureplan.md](./futureplan.md)** for the full roadmap):
 
-1. **Primer** — foundational context about the skill and its sub-skills
-2. **Micro-skills** — the building blocks broken down with clear what/why/how/pitfall structure
-3. **Practice drills** — short, focused exercises matched to the skill type (reflection, analysis, scenario, decision)
-4. **Guided simulation** — AI-powered roleplay with real-time coaching hints
-5. **Independent simulation** — the same quality of interaction, but without coaching
-6. **Replay** — review the full simulation transcript with AI annotations
-7. **Reflection** — structured self-analysis of patterns and triggers
-8. **Escalated simulation** — a harder version based on identified weaknesses
-9. **Assessment** — final competency evaluation
-10. **Report** — comprehensive AI-generated competency report with radar charts
+### 1. Practice engine (now → Skill Lab Canvas)
 
-## Skills taxonomy
+**Today:** Skills map to **archetypes** (conversational, analytical, reflective, …), each with a fixed stage flow—primer, micro-skills, drills, simulation or reasoning workspace, reflection, report.
 
-The platform covers 14 core skills across 6 categories, each with 6-8 learnable sub-skills:
+**Next:** **Composable learning primitives** (read, annotate, prioritize, canvas, investigation, simulation, …) assembled into **practice blueprints** so skills like bias detection, root cause analysis, or prioritization get the right interaction sequence—not a one-size-fits-all analytical screen.
 
-- **Human skills** — emotional intelligence, adaptability, communication
-- **Cognitive skills** — critical thinking, problem solving, creative thinking, metacognition
-- **Technical skills** — AI literacy, system design
-- **Strategic skills** — systems thinking, judgment
-- **Leadership skills** — influence and negotiation, leadership essentials
-- **Business skills** — strategic sales
+- Path assembly = **blueprint compiler** (rules + structured content generation), not a chat agent that invents courses.
+- **Real agents** are reserved for **simulation** and **investigation**—where the situation reacts turn-by-turn.
 
-Each skill uses a specific learning engine type (simulation-based, reflective AI mirror, structured reasoning, consequence simulation, etc.) that determines how drills, simulations, and evaluations are structured.
+### 2. Human Development Graph (longitudinal moat)
+
+**Vision:** Every lab, drill, and simulation feeds a structured **learner model** (traits, patterns, skill history, confidence—with evidence). An **event-driven growth layer** recommends the next practice, pathway, and light-touch nudges (email, push, Slack).
+
+- Value is **remembering who this person is over months**, not generating more generic content.
+- Cost stays manageable when the system **wakes on events** (sim completed, report ready, inactivity)—not always-on chat.
+
+**Positioning:** Lumi6 is a **practice platform** with agents in the pockets where dialogue or discovery *is* the skill, plus a longitudinal layer that gets smarter about *you*—not an LMS with a bot that writes lessons.
+
+---
+
+## What it does today
+
+### Archetype-based sprints
+
+Skills are grouped into practice formats:
+
+| Archetype | Practice focus | Example skills |
+|-----------|----------------|----------------|
+| **Conversational** | AI roleplay, pushback, escalation | Communication, influence, leadership, sales |
+| **Analytical** | Reasoning workspace (assumptions, evidence, counterfactuals) | Critical thinking, problem solving, judgment |
+| **Reflective** | Guided journaling, patterns, growth plan | Emotional intelligence, metacognition, adaptability |
+| **Creation / Performance / Systems** | Stubs (primer → concepts → report) | AI literacy, system design, systems thinking |
+
+### Conversational flow (reference)
+
+1. **Primer** — context and sub-skills  
+2. **Micro-skills** — building blocks  
+3. **Drills** — scenario, analysis, reflection, or decision exercises  
+4. **Guided simulation** — roleplay with coaching hints  
+5. **Independent simulation** — same interaction, no hints  
+6. **Replay** — transcript review  
+7. **Reflection** — self-analysis  
+8. **Escalated simulation** — harder scenario  
+9. **Report** — AI competency summary  
+
+Analytical and reflective archetypes use different stage sets (e.g. reasoning workspace or guided reflection instead of full simulation chain).
+
+### Skills taxonomy
+
+~15 skills across human, cognitive, strategic, leadership, business, and technical categories, each with 6–8 sub-skills. Source: `src/data/skills-taxonomy.ts`.
+
+---
 
 ## Tech stack
 
-- **Frontend**: Next.js, TypeScript, Zustand stores, vanilla CSS design system
-- **Backend**: FastAPI (Python), async endpoints
-- **AI**: Groq (Llama 3.3 70B) via OpenAI-compatible API, with structured JSON output
-- **Database**: Supabase (PostgreSQL + Auth)
-- **Design**: DM Sans + Inter typography, academic professional theme
+- **Frontend:** Next.js, TypeScript, Zustand, CSS design system  
+- **Backend:** FastAPI (Python), async endpoints  
+- **AI:** Groq (Llama 3.3 70B) via OpenAI-compatible API, structured JSON where possible  
+- **Database:** Supabase (PostgreSQL + Auth, pgvector for memory)  
+- **Design:** DM Sans + Inter, academic professional theme  
+
+---
 
 ## Getting started
 
@@ -68,12 +99,32 @@ SUPABASE_URL=your_url
 SUPABASE_SERVICE_ROLE_KEY=your_key
 ```
 
-## Architecture
+---
 
-The AI layer consists of 3 routers:
+## Architecture (current)
 
-- `sprint_content.py` — generates primers, micro-skills, scenarios (content generation)
-- `sprint_simulation.py` — manages multi-turn AI simulations with embedded coaching
-- `sprint_evaluation.py` — drill scoring, reflection analysis, competency reports
+| Router | Responsibility |
+|--------|----------------|
+| `sprint_content.py` | Primer, micro-skills, drills, scenarios, reasoning challenges, reflection prompts |
+| `sprint_simulation.py` | Multi-turn simulations (session state, coaching telemetry) |
+| `sprint_evaluation.py` | Drill scoring, reflection analysis, competency reports |
 
-All AI calls go through a unified client (`ai/llm.py`) that supports any OpenAI-compatible API (Groq, OpenAI, Together, etc.) with automatic JSON mode.
+Supporting pieces:
+
+- `backend/app/ai/archetypes.py` — stage flows and evaluation dimensions per archetype  
+- `src/hooks/useArchetypeFlow.ts` — frontend stage navigation  
+- `user_profiles` + `memory_nodes` (SQL) — planned home for the Human Development Graph  
+
+All AI calls go through `backend/app/ai/llm.py` (OpenAI-compatible APIs).
+
+---
+
+## Documentation
+
+- **[futureplan.md](./futureplan.md)** — Canvas engine primitives, blueprint model, agent boundaries, **agent/memory tech stack** (Redis, pgvector, when to embed), growth layer, phased roadmap, and technical debt
+
+---
+
+## License
+
+See repository license file if present.

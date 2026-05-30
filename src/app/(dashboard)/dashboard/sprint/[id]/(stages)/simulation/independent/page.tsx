@@ -27,7 +27,7 @@ export default function IndependentSimulationPage() {
 
   useEffect(() => {
     api
-      .get<{ scenarios: Scenario[] }>("/api/v1/sprint/content/scenarios")
+      .get<{ scenarios: Scenario[] }>(`/api/v1/sprint/content/scenarios?skill_id=${sprintId}`)
       .then((data) => setScenarios(data.scenarios))
       .catch(() => {
         setScenarios([
@@ -35,7 +35,7 @@ export default function IndependentSimulationPage() {
           { id: "s5", title: "Executive Pushback", difficulty: "hard", context: "You're presenting a controversial recommendation to a C-suite executive who strongly disagrees with your approach.", aiCharacterName: "Patricia Kensington" },
         ]);
       });
-  }, []);
+  }, [sprintId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });

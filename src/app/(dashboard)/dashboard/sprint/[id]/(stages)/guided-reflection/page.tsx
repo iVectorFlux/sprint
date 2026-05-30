@@ -508,7 +508,38 @@ export default function GuidedReflectionPage() {
     )
   }
 
-  return null
+  // ── Fallback Render (in case of an unexpected flow or phase state) ────────
+  return (
+    <div className="sprint-stage-container" style={{ textAlign: 'center', paddingTop: 80 }}>
+      <div style={{ fontSize: 40, marginBottom: 16 }}>⚠️</div>
+      <h2 className="headline-sm">Unexpected Reflection State</h2>
+      <p className="body-sm" style={{ color: 'var(--text-muted)', marginTop: 8 }}>
+        The reflection session was loaded, but the engine is in an unexpected state.
+      </p>
+      <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 24 }}>
+        <button
+          className="btn btn-ghost"
+          onClick={() => {
+            setPhase('intro')
+            setPromptIndex(0)
+            setEntries({})
+            setCurrentEntry('')
+            setEntryFeedback(null)
+            setPatterns(null)
+            setGrowthPlan(null)
+          }}
+        >
+          Reset Session
+        </button>
+        <button
+          className="btn btn-primary"
+          onClick={() => router.push(`/dashboard/sprint/${sprintId}`)}
+        >
+          Back to Sprint Detail
+        </button>
+      </div>
+    </div>
+  )
 }
 
 // ─── Fallback data ─────────────────────────────────────────────────────────

@@ -21,6 +21,8 @@ def primer_cards_prompt(
     sub_skills: list[str],
     user_context: dict,
     archetype: str = "conversational",
+    focus_sub_skill: Optional[str] = None,
+    atomic_skills: Optional[list[str]] = None,
 ) -> tuple[str, str]:
     """Generate 5 primer cards for a skill sprint, styled for the archetype."""
 
@@ -48,28 +50,57 @@ def primer_cards_prompt(
         f"{archetype_context} "
         "Respond ONLY with valid JSON."
     )
-    user = (
-        f"Generate 5 primer cards for the skill: **{skill_name}**\n"
-        f"Sub-skills covered: {', '.join(sub_skills)}\n"
-        f"User role: {user_context.get('role', 'Professional')}\n"
-        f"Industry: {user_context.get('industry', 'General')}\n"
-        f"Seniority: {user_context.get('seniority', 'Mid-level')}\n\n"
-        "Return JSON with this exact structure:\n"
-        '{\n'
-        '  "cards": [\n'
-        '    {\n'
-        '      "title": "Card title",\n'
-        '      "content": "2-3 sentence explanation tailored to the user\'s role and industry",\n'
-        '      "icon": "one of: target, brain, alert-triangle, trending-up, check-circle"\n'
-        '    }\n'
-        '  ]\n'
-        '}\n\n'
-        "Card 1: Why this skill matters for their specific role\n"
-        "Card 2: The science/research behind deliberate practice for this skill\n"
-        "Card 3: Common pitfalls professionals at their level face\n"
-        "Card 4: What they'll practice in this sprint\n"
-        "Card 5: Their measurable goal for this sprint"
-    )
+    
+    if focus_sub_skill:
+        sub_skills_str = f"Focus sub-skill: **{focus_sub_skill}**"
+        if atomic_skills:
+            sub_skills_str += f"\nAtomic building blocks: {', '.join(atomic_skills)}"
+        
+        user = (
+            f"Generate 5 primer cards specifically focusing on the sub-skill: **{focus_sub_skill}** (parent skill: **{skill_name}**)\n"
+            f"{sub_skills_str}\n"
+            f"User role: {user_context.get('role', 'Professional')}\n"
+            f"Industry: {user_context.get('industry', 'General')}\n"
+            f"Seniority: {user_context.get('seniority', 'Mid-level')}\n\n"
+            "Return JSON with this exact structure:\n"
+            '{\n'
+            '  "cards": [\n'
+            '    {\n'
+            '      "title": "Card title",\n'
+            '      "body": "2-3 sentence explanation tailored to the user\'s role and industry",\n'
+            '      "detail": "Extended detail/concrete application box content (2-3 sentences of deep context or actionable advice)"\n'
+            '    }\n'
+            '  ]\n'
+            '}\n\n'
+            "Card 1: Why this sub-skill matters for their specific role\n"
+            "Card 2: The science/research behind deliberate practice for this sub-skill\n"
+            "Card 3: Common pitfalls professionals at their level face regarding this sub-skill\n"
+            "Card 4: What they'll practice in this sprint (focusing on its atomic building blocks)\n"
+            "Card 5: Their measurable goal for this sub-skill sprint"
+        )
+    else:
+        user = (
+            f"Generate 5 primer cards for the skill: **{skill_name}**\n"
+            f"Sub-skills covered: {', '.join(sub_skills)}\n"
+            f"User role: {user_context.get('role', 'Professional')}\n"
+            f"Industry: {user_context.get('industry', 'General')}\n"
+            f"Seniority: {user_context.get('seniority', 'Mid-level')}\n\n"
+            "Return JSON with this exact structure:\n"
+            '{\n'
+            '  "cards": [\n'
+            '    {\n'
+            '      "title": "Card title",\n'
+            '      "body": "2-3 sentence explanation tailored to the user\'s role and industry",\n'
+            '      "detail": "Extended detail/concrete application box content (2-3 sentences of deep context or actionable advice)"\n'
+            '    }\n'
+            '  ]\n'
+            '}\n\n'
+            "Card 1: Why this skill matters for their specific role\n"
+            "Card 2: The science/research behind deliberate practice for this skill\n"
+            "Card 3: Common pitfalls professionals at their level face\n"
+            "Card 4: What they'll practice in this sprint\n"
+            "Card 5: Their measurable goal for this sprint"
+        )
     return system, user
 
 
@@ -78,6 +109,8 @@ def micro_skills_prompt(
     sub_skills: list[str],
     user_context: dict,
     archetype: str = "conversational",
+    focus_sub_skill: Optional[str] = None,
+    atomic_skills: Optional[list[str]] = None,
 ) -> tuple[str, str]:
     """Generate micro-skills with good/bad examples, styled for the archetype."""
 
@@ -91,26 +124,49 @@ def micro_skills_prompt(
         "You are Lumi6, an AI-native learning platform. Generate micro-skill breakdowns "
         "with concrete workplace examples. Respond ONLY with valid JSON."
     )
-    user = (
-        f"Generate micro-skill cards for: **{skill_name}**\n"
-        f"Sub-skills: {', '.join(sub_skills)}\n"
-        f"User role: {user_context.get('role', 'Professional')}\n"
-        f"Industry: {user_context.get('industry', 'General')}\n"
-        f"Note: {example_guidance}\n\n"
-        "For each sub-skill, create a micro-skill card. Return JSON:\n"
-        '{\n'
-        '  "microSkills": [\n'
-        '    {\n'
-        '      "id": "ms-1",\n'
-        '      "name": "Sub-skill name",\n'
-        '      "description": "What this micro-skill is and why it matters",\n'
-        '      "goodExample": "A concrete workplace example of doing this WELL",\n'
-        '      "badExample": "A concrete workplace example of doing this POORLY",\n'
-        '      "tip": "One actionable tip to practice this immediately"\n'
-        '    }\n'
-        '  ]\n'
-        '}'
-    )
+    
+    if focus_sub_skill and atomic_skills:
+        user = (
+            f"Generate micro-skill cards for the sub-skill: **{focus_sub_skill}** (parent skill: **{skill_name}**)\n"
+            f"Atomic building blocks to break down: {', '.join(atomic_skills)}\n"
+            f"User role: {user_context.get('role', 'Professional')}\n"
+            f"Industry: {user_context.get('industry', 'General')}\n"
+            f"Note: {example_guidance}\n\n"
+            "For each atomic building block, create a micro-skill card. Return JSON:\n"
+            '{\n'
+            '  "microSkills": [\n'
+            '    {\n'
+            '      "id": "ms-1",\n'
+            '      "name": "Atomic skill name",\n'
+            '      "whatItIs": "1-2 sentence definition explaining what this atomic skill is",\n'
+            '      "whyItMatters": "1-2 sentence explanation of why this atomic skill is crucial for their role and industry",\n'
+            '      "goodExample": "A concrete workplace example of doing this WELL",\n'
+            '      "badExample": "A concrete workplace example of doing this POORLY"\n'
+            '    }\n'
+            '  ]\n'
+            '}'
+        )
+    else:
+        user = (
+            f"Generate micro-skill cards for: **{skill_name}**\n"
+            f"Sub-skills: {', '.join(sub_skills)}\n"
+            f"User role: {user_context.get('role', 'Professional')}\n"
+            f"Industry: {user_context.get('industry', 'General')}\n"
+            f"Note: {example_guidance}\n\n"
+            "For each sub-skill, create a micro-skill card. Return JSON:\n"
+            '{\n'
+            '  "microSkills": [\n'
+            '    {\n'
+            '      "id": "ms-1",\n'
+            '      "name": "Sub-skill name",\n'
+            '      "whatItIs": "1-2 sentence definition explaining what this micro-skill is",\n'
+            '      "whyItMatters": "1-2 sentence explanation of why this micro-skill is crucial for their role and industry",\n'
+            '      "goodExample": "A concrete workplace example of doing this WELL",\n'
+            '      "badExample": "A concrete workplace example of doing this POORLY"\n'
+            '    }\n'
+            '  ]\n'
+            '}'
+        )
     return system, user
 
 
@@ -123,6 +179,8 @@ def drills_prompt(
     sub_skills: list[str],
     user_context: dict,
     archetype: str = "conversational",
+    focus_sub_skill: Optional[str] = None,
+    atomic_skills: Optional[list[str]] = None,
 ) -> tuple[str, str]:
     """Generate drills appropriate for the archetype's practice mode."""
 
@@ -159,27 +217,53 @@ def drills_prompt(
         "for workplace skills. Each drill should challenge a specific micro-skill. "
         "Respond ONLY with valid JSON."
     )
-    user = (
-        f"Generate 6 practice drills for: **{skill_name}**\n"
-        f"Sub-skills: {', '.join(sub_skills[:6])}\n"
-        f"Drill type: {drill_specs['type_label']}\n"
-        f"User role: {user_context.get('role', 'Professional')}\n"
-        f"Industry: {user_context.get('industry', 'General')}\n"
-        f"Instructions: {drill_specs['instruction']}\n\n"
-        "Return JSON:\n"
-        '{\n'
-        '  "drills": [\n'
-        '    {\n'
-        f'      "id": "d1",\n'
-        f'      "microSkill": "Name of the sub-skill being tested",\n'
-        f'      "type": "{drill_specs["type"]}",\n'
-        '      "context": "2-3 sentence situation setup",\n'
-        '      "prompt": "The specific challenge or question for the user",\n'
-        '      "expectedBehavior": "What a strong response demonstrates"\n'
-        '    }\n'
-        '  ]\n'
-        '}'
-    )
+    
+    if focus_sub_skill and atomic_skills:
+        num_drills = len(atomic_skills)
+        user = (
+            f"Generate exactly {num_drills} practice drills for the sub-skill: **{focus_sub_skill}** (parent skill: **{skill_name}**)\n"
+            f"Generate exactly ONE drill for each of the following atomic building blocks: {', '.join(atomic_skills)}\n"
+            f"Make sure you map each drill to a unique atomic building block from the list, with NO duplicates.\n"
+            f"Drill type: {drill_specs['type_label']}\n"
+            f"User role: {user_context.get('role', 'Professional')}\n"
+            f"Industry: {user_context.get('industry', 'General')}\n"
+            f"Instructions: {drill_specs['instruction']}\n\n"
+            "Return JSON:\n"
+            '{\n'
+            '  "drills": [\n'
+            '    {\n'
+            '      "id": "d1",\n'
+            '      "microSkill": "Name of the atomic skill being tested (must match one of the atomic building blocks exactly)",\n'
+            '      "type": "{drill_specs["type"]}",\n'
+            '      "context": "2-3 sentence situation setup",\n'
+            '      "prompt": "The specific challenge or question for the user",\n'
+            '      "expectedBehavior": "What a strong response demonstrates"\n'
+            '    }\n'
+            '  ]\n'
+            '}'
+        )
+    else:
+        user = (
+            f"Generate 6 practice drills for: **{skill_name}**\n"
+            f"Sub-skills: {', '.join(sub_skills[:6])}\n"
+            f"Drill type: {drill_specs['type_label']}\n"
+            f"User role: {user_context.get('role', 'Professional')}\n"
+            f"Industry: {user_context.get('industry', 'General')}\n"
+            f"Instructions: {drill_specs['instruction']}\n\n"
+            "Return JSON:\n"
+            '{\n'
+            '  "drills": [\n'
+            '    {\n'
+            '      "id": "d1",\n'
+            '      "microSkill": "Name of the sub-skill being tested",\n'
+            '      "type": "{drill_specs["type"]}",\n'
+            '      "context": "2-3 sentence situation setup",\n'
+            '      "prompt": "The specific challenge or question for the user",\n'
+            '      "expectedBehavior": "What a strong response demonstrates"\n'
+            '    }\n'
+            '  ]\n'
+            '}'
+        )
     return system, user
 
 

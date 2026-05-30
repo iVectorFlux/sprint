@@ -8,7 +8,7 @@ import { useProgressStore } from "@/stores/useProgressStore";
 import { useTelemetryStore } from "@/stores/useTelemetryStore";
 import { useSprintContext } from "@/hooks/useSprintContext";
 import { useArchetypeFlow } from "@/hooks/useArchetypeFlow";
-import type { SkillTaxonomyEntry } from "@/data/skills-taxonomy";
+import type { SkillTaxonomyEntry, SubSkillEntry } from "@/data/skills-taxonomy";
 
 interface Drill {
   id: string;
@@ -83,6 +83,169 @@ function buildDrills(skill: SkillTaxonomyEntry): Drill[] {
   return skill.sub_skills.slice(0, 6).map((sub, i) => generator(sub, i));
 }
 
+const CUSTOM_DRILLS: Record<string, { context: string; prompt: string }> = {
+  // Active Listening
+  "Paraphrasing": {
+    context: `A teammate (Jordan) pushes back on your proposal to adopt a new task tracking tool in a meeting:
+
+Jordan (COUNTERPART):
+"I don't see why we need to change our approach, it's worked fine so far."`,
+    prompt: `Respond using Paraphrasing to restate their concern in your own words before introducing the change.
+
+💡 COACH INSTRUCTION
+How can you respond using objective framing to refocus the conversation on the specific issue at hand?`,
+  },
+  "Reflective Questioning": {
+    context: `Your colleague (Alex) is highly concerned about an upcoming database migration:
+
+Alex (COUNTERPART):
+"I'm really worried about this database migration. If anything goes wrong, the whole system could be down for hours and clients will be furious."`,
+    prompt: `Ask a Reflective Question that digs into their underlying concern instead of just giving a superficial reassurance.
+
+💡 COACH INSTRUCTION
+Probe their deeper concern—is it the technical complexity of the migration, or do they feel the rollback plans are insufficient?`,
+  },
+  "Non-verbal Acknowledgment": {
+    context: `A junior designer (Maria) is sharing a creative concept. She seems nervous, speaking fast and looking for confirmation:
+
+Maria (COUNTERPART):
+"So... this is the layout I was thinking of. It's a bit different, but I think it could work..."`,
+    prompt: `Describe how you would use Non-verbal Acknowledgment to make Maria feel comfortable, valued, and heard.
+
+💡 COACH INSTRUCTION
+Detail your body language, eye contact, and brief vocal cues to signal engagement without interrupting her flow.`,
+  },
+  "Emotional Validation": {
+    context: `An engineering lead (Taylor) is visibly frustrated:
+
+Taylor (COUNTERPART):
+"Product just shifted the scope on us again. That's the third time this month! We're never going to ship this on time."`,
+    prompt: `Formulate a response that uses Emotional Validation to acknowledge Taylor's frustration before discussing timeline solutions.
+
+💡 COACH INSTRUCTION
+Acknowledge the emotional impact of shifted goalposts and validate Taylor's feelings directly before turning to factual resource/deadline planning.`,
+  },
+  "Summarizing": {
+    context: `Your manager (Marcus) spent the last five minutes explaining multiple different concerns regarding an upcoming client demo: latency issues in the dashboard, lack of clean sample data, and the marketing team's availability.`,
+    prompt: `Provide a crisp, clear Summary of the key points Marcus raised.
+
+💡 COACH INSTRUCTION
+Synthesize the multiple concerns into 2-3 logical bullet points and ask for confirmation to ensure full alignment.`,
+  },
+  "Silence Management": {
+    context: `A client is explaining a critical bug, but hesitates and trails off:
+
+Client (COUNTERPART):
+"Well, we ran the script, and... I don't know, it just didn't feel right..." [Silence falls]`,
+    prompt: `Describe how you would handle this pause using Silence Management.
+
+💡 COACH INSTRUCTION
+Explain the benefit of holding back instead of immediately jumping in to fill the gap. What is the optimal pause duration, and why?`,
+  },
+
+  // Storytelling
+  "Narrative Arc Construction": {
+    context: `You want to pitch a bug-fix prioritization to the leadership team. You have the raw data showing a 40% drop in user checkout retention.`,
+    prompt: `Outline a brief narrative arc (Tension, Climax, Resolution) to present this problem to the team.
+
+💡 COACH INSTRUCTION
+Avoid simply listing raw numbers. Structure a story where the user's frustration is the core obstacle and the consolidation of checkout is the resolution.`,
+  },
+  "Emotional Hook Setting": {
+    context: `You are opening a presentation about cybersecurity training to a group of distracted employees.`,
+    prompt: `Draft an opening hook (1-2 sentences) to immediately capture the room's attention.
+
+💡 COACH INSTRUCTION
+Start with a vivid, relatable moment (e.g. a 9:00 AM panic) rather than a dry definition of cybersecurity.`,
+  },
+  "Concrete Detail Selection": {
+    context: `You are reporting a database outage in a post-mortem review. The initial draft says: "The server crashed due to high traffic."`,
+    prompt: `Rewrite this using Concrete Detail Selection to make the technical situation tangible and clear.
+
+💡 COACH INSTRUCTION
+Replace abstractions with specific technical metrics (e.g., database latency, memory spikes) to create a clear mental image.`,
+  },
+  "Audience-Relevant Framing": {
+    context: `You are presenting the migration from legacy software to two different groups: the Finance team and the Engineering team.`,
+    prompt: `Provide the specific focus or stake you would highlight for each of these two audiences.
+
+💡 COACH INSTRUCTION
+Differentiate what each team cares about: ROI and cost efficiency vs. developer velocity and API maintenance.`,
+  },
+  "Punchline Delivery": {
+    context: `You are concluding a presentation about why the design team should prioritize product simplicity.`,
+    prompt: `Draft a memorable concluding punchline that lands your key message with maximum impact.
+
+💡 COACH INSTRUCTION
+Keep it brief, highly quotable, and directly connected to the core theme (e.g., 'a feature the user cannot find is a feature that does not exist').`,
+  },
+};
+
+/**
+ * Build drills specifically for a sub-skill using its atomic skills.
+ */
+function buildAtomicDrills(skill: SkillTaxonomyEntry, subSkill: SubSkillEntry): Drill[] {
+  const archetype = skill.archetype;
+
+  // Drill templates tailored by archetype and centered on atomic skills of the sub-skill
+  const drillGenerators: Record<string, (atom: { name: string; description: string }, i: number) => Drill> = {
+    conversational: (atom, i) => {
+      const custom = CUSTOM_DRILLS[atom.name];
+      return {
+        id: String(i + 1),
+        microSkill: atom.name,
+        type: "scenario",
+        context: custom ? custom.context : `You're practicing ${subSkill.name.toLowerCase()}. In this dynamic work scenario, you are challenged to apply ${atom.name.toLowerCase()} effectively.`,
+        prompt: custom ? custom.prompt : `Given this conversational focus, what specific words or approach would you use to demonstrate ${atom.name.toLowerCase()}? Describe your response and the rationale behind it.`,
+        expectedBehavior: atom.description,
+      };
+    },
+    analytical: (atom, i) => ({
+      id: String(i + 1),
+      microSkill: atom.name,
+      type: "analysis",
+      context: `You are analyzing a complex problem that requires ${subSkill.name.toLowerCase()}. Specifically, you must employ ${atom.name.toLowerCase()} to break down the details.`,
+      prompt: `Walk through how you would systematically apply ${atom.name.toLowerCase()} to analyze the situation. What frameworks, logic, or questions would you prioritize?`,
+      expectedBehavior: atom.description,
+    }),
+    reflective: (atom, i) => ({
+      id: String(i + 1),
+      microSkill: atom.name,
+      type: "reflection",
+      context: `Reflect on a past situation where ${subSkill.name.toLowerCase()} was at play, focusing on how you handled (or could have handled) the aspect of ${atom.name.toLowerCase()}.`,
+      prompt: `Describe the context briefly. How did you apply ${atom.name.toLowerCase()}? What did you learn about your default habits with this atomic building block?`,
+      expectedBehavior: atom.description,
+    }),
+    creation: (atom, i) => ({
+      id: String(i + 1),
+      microSkill: atom.name,
+      type: "scenario",
+      context: `A core creation challenge under the sub-skill ${subSkill.name}. You need to apply ${atom.name.toLowerCase()} to draft or build a solution.`,
+      prompt: `Outline your step-by-step creation approach. How will you integrate ${atom.name.toLowerCase()} to optimize the final artifact?`,
+      expectedBehavior: atom.description,
+    }),
+    performance: (atom, i) => ({
+      id: String(i + 1),
+      microSkill: atom.name,
+      type: "scenario",
+      context: `A performance event requiring ${subSkill.name}. Specifically, your mastery of ${atom.name.toLowerCase()} will determine the outcome.`,
+      prompt: `Describe how you would execute this under pressure. What key indicators of ${atom.name.toLowerCase()} will you highlight?`,
+      expectedBehavior: atom.description,
+    }),
+    systems: (atom, i) => ({
+      id: String(i + 1),
+      microSkill: atom.name,
+      type: "decision",
+      context: `You are designing or managing a system involving ${subSkill.name}. You need to balance design trade-offs utilizing ${atom.name.toLowerCase()}.`,
+      prompt: `What architectural or procedural choices do you make? How does ${atom.name.toLowerCase()} help you decide where to compromise?`,
+      expectedBehavior: atom.description,
+    }),
+  };
+
+  const generator = drillGenerators[archetype] || drillGenerators.conversational;
+  return (subSkill.atomic_skills || []).slice(0, 6).map((atom, i) => generator(atom, i));
+}
+
 const DRILL_TYPE_LABELS: Record<string, string> = {
   scenario: "Scenario Response",
   analysis: "Analysis Exercise",
@@ -92,7 +255,7 @@ const DRILL_TYPE_LABELS: Record<string, string> = {
 
 export default function DrillsPage() {
   const router = useRouter();
-  const { sprintId, skill, skillName, displayName, isSubSkillSprint, skillSlug, subSkillSlug, archetype } = useSprintContext();
+  const { sprintId, skill, subSkill, skillName, displayName, isSubSkillSprint, skillSlug, subSkillSlug, archetype } = useSprintContext();
   const flow = useArchetypeFlow(archetype);
   const { updateStage } = useSprintStore();
   const { setStage, addDrillScore } = useProgressStore();
@@ -110,16 +273,24 @@ export default function DrillsPage() {
     if (!skill) return;
     if (isSubSkillSprint) setStage(skillSlug, subSkillSlug, "drill");
     track({ type: "stage_enter", skillSlug, subSkillSlug, data: { stage: "drill" } });
+    
+    const fallbackDrills = isSubSkillSprint && subSkill 
+      ? buildAtomicDrills(skill, subSkill) 
+      : buildDrills(skill);
+
+    const focusQuery = isSubSkillSprint && subSkill ? `&focus_sub_skill=${encodeURIComponent(subSkill.name)}` : '';
+    const atomicQuery = isSubSkillSprint && subSkill?.atomic_skills ? `&atomic_skills=${encodeURIComponent(subSkill.atomic_skills.map(a => a.name).join(','))}` : '';
+
     // Use the new archetype-aware /drills endpoint
     api
-      .get<{ drills: Drill[] }>(`/api/v1/sprint/content/drills?skill_id=${sprintId}`)
+      .get<{ drills: Drill[] }>(`/api/v1/sprint/content/drills?skill_id=${sprintId}${focusQuery}${atomicQuery}`)
       .then((data) => {
-        setDrills(data.drills?.length ? data.drills : buildDrills(skill));
+        setDrills(data.drills?.length ? data.drills : fallbackDrills);
       })
       .catch(() => {
-        setDrills(buildDrills(skill));
+        setDrills(fallbackDrills);
       });
-  }, [sprintId, skill]);
+  }, [sprintId, skill, isSubSkillSprint, subSkill]);
 
   useEffect(() => {
     if (!timerActive || timer <= 0) return;
@@ -241,7 +412,7 @@ export default function DrillsPage() {
               {drill.microSkill}
             </h1>
             <p className="body-sm">
-              {skillName} · Think carefully, then respond
+              {isSubSkillSprint && subSkill ? `${skillName} · ${subSkill.name}` : skillName} · Think carefully, then respond
             </p>
           </div>
           {!feedback && (
@@ -262,13 +433,13 @@ export default function DrillsPage() {
         }}
       >
         <div className="label-mono" style={{ marginBottom: 8, color: "var(--primary-container)" }}>Situation</div>
-        <p className="body-ui" style={{ lineHeight: 1.7 }}>{drill.context}</p>
+        <p className="body-ui" style={{ lineHeight: 1.7, whiteSpace: "pre-line" }}>{drill.context}</p>
       </div>
 
       {/* The actual question */}
       <div className="card" style={{ padding: "20px 24px", marginBottom: 24, borderColor: "var(--primary-container)" }}>
         <div className="label-mono" style={{ marginBottom: 8 }}>Your Challenge</div>
-        <p className="body-reading" style={{ fontSize: 15, lineHeight: 1.75 }}>{drill.prompt}</p>
+        <p className="body-reading" style={{ fontSize: 15, lineHeight: 1.75, whiteSpace: "pre-line" }}>{drill.prompt}</p>
       </div>
 
       {/* Response Input or Feedback */}

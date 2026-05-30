@@ -6,7 +6,7 @@ import { api } from "@/lib/api";
 import { useSprintStore } from "@/stores/useSprintStore";
 import { useProgressStore } from "@/stores/useProgressStore";
 import { useSprintContext } from "@/hooks/useSprintContext";
-import type { SkillTaxonomyEntry } from "@/data/skills-taxonomy";
+import type { SkillTaxonomyEntry, SubSkillEntry } from "@/data/skills-taxonomy";
 
 interface PrimerCard {
   title: string;
@@ -20,9 +20,6 @@ interface PrimerCard {
  */
 function buildPrimerCards(skill: SkillTaxonomyEntry): PrimerCard[] {
   const subList = skill.sub_skills.map((s) => s.name).join(", ");
-  const topDifficulty = [...skill.sub_skills].sort((a, b) => b.difficulty_level - a.difficulty_level);
-  const hardest = topDifficulty[0];
-  const easiest = topDifficulty[topDifficulty.length - 1];
 
   return [
     {
@@ -42,15 +39,49 @@ function buildPrimerCards(skill: SkillTaxonomyEntry): PrimerCard[] {
         .map((s, i) => `${i + 1}. ${s.name} — ${s.description}`)
         .join("\n"),
     },
-    {
-      title: "How Difficulty Works",
-      body: `Not all micro-skills are equally challenging. "${easiest.name}" (Level ${easiest.difficulty_level}/5) is the most accessible starting point — you'll build confidence here first. "${hardest.name}" (Level ${hardest.difficulty_level}/5) is the most advanced and will be introduced gradually as your baseline improves.`,
-      detail: `The AI monitors your performance across every practice interaction and adjusts the complexity, context, and challenge level in real time. Early exercises focus on recognition and understanding. Later exercises require application under pressure, ambiguity, and competing priorities.`,
-    },
+
     {
       title: "What to Expect in This Sprint",
       body: `This is not a passive course. You won't be watching videos or reading articles. Every stage of this sprint requires active engagement — responding to scenarios, making decisions, analyzing outcomes, and reflecting on your patterns.`,
       detail: `Here's the flow: After this primer, you'll learn the core micro-skills with concrete examples. Then you'll practice with quick drills, enter guided AI simulations where you get real-time coaching, progress to independent simulations without help, review your performance, reflect on your patterns, face an escalated challenge, and complete a final assessment. The AI generates a comprehensive competency report at the end.`,
+    },
+  ];
+}
+
+/**
+ * Build primer cards specific to a sub-skill and its atomic building blocks.
+ * When a learner starts e.g. "Active Listening", they see primers about
+ * Active Listening — not the parent "Communication" skill.
+ */
+function buildSubSkillPrimerCards(
+  skill: SkillTaxonomyEntry,
+  subSkill: SubSkillEntry
+): PrimerCard[] {
+  const atomics = subSkill.atomic_skills || [];
+
+  return [
+    {
+      title: `What is ${subSkill.name}?`,
+      body: subSkill.description,
+      detail: `${subSkill.name} is one of the core micro-skills within ${skill.name}. While many people think of it as a single behavior, it's actually composed of several key atomic building blocks. This sprint will break down each aspect and give you deliberate practice on the specific behaviors that matter most.`,
+    },
+    {
+      title: `Why ${subSkill.name} Matters`,
+      body: `${subSkill.name} is often the invisible differentiator in professional effectiveness. People who excel at it build stronger relationships, resolve conflicts faster, and are perceived as more capable leaders — even when their technical skills are average.`,
+      detail: `Most professionals have never been formally trained in ${subSkill.name.toLowerCase()}. They rely on intuition and habits formed early in their careers. This sprint replaces guesswork with deliberate practice across each atomic behavior, giving you a structured path to mastery.`,
+    },
+    {
+      title: `The ${atomics.length} Atomic Skills You'll Master`,
+      body: `This sprint breaks ${subSkill.name.toLowerCase()} into ${atomics.length} concrete, practicable behaviors — these are the essential ingredients of the skill. Each one is something you can observe, practice, and measure improvement on.`,
+      detail: `These are the ${atomics.length} key ingredients that make up ${subSkill.name.toLowerCase()}:\n\n` + atomics
+        .map((a, i) => `${i + 1}. ${a.name} — ${a.description}`)
+        .join("\n"),
+    },
+
+    {
+      title: "What to Expect",
+      body: `This is focused, deliberate practice — not passive reading. You'll learn each atomic skill, practice it in isolation through drills, then apply it in realistic scenarios where the AI pushes back and adapts to your responses.`,
+      detail: `The flow: After this primer, you'll study each atomic skill with concrete examples of what good and bad look like. Then you'll practice with timed drills, enter AI simulations, review your performance, and reflect on your behavioral patterns. Every interaction is evaluated and contributes to your competency report.`,
     },
   ];
 }
@@ -66,7 +97,7 @@ export default function PrimerPage() {
 
   useEffect(() => {
     if (!skill) {
-      setLoading(false);
+      if (sprintId) setLoading(false);
       return;
     }
     // Track progress
@@ -75,18 +106,31 @@ export default function PrimerPage() {
       setStage(skillSlug, subSkillSlug, "primer");
     }
 
+    // Build the right fallback based on sprint type
+    const fallbackCards = isSubSkillSprint && subSkill
+      ? buildSubSkillPrimerCards(skill, subSkill)
+      : buildPrimerCards(skill);
+
+    const focusQuery = isSubSkillSprint && subSkill ? `&focus_sub_skill=${encodeURIComponent(subSkill.name)}` : '';
+    const atomicQuery = isSubSkillSprint && subSkill?.atomic_skills ? `&atomic_skills=${encodeURIComponent(subSkill.atomic_skills.map(a => a.name).join(','))}` : '';
+
     // Try AI-generated primers via backend
     api
-      .get<{ cards: PrimerCard[] }>(`/api/v1/sprint/content/primer?skill_id=${sprintId}`)
+      .get<{ cards: any[] }>(`/api/v1/sprint/content/primer?skill_id=${sprintId}${focusQuery}${atomicQuery}`)
       .then((data) => {
-        setCards(data.cards?.length ? data.cards : buildPrimerCards(skill));
+        const mappedCards = (data.cards || []).map((card: any) => ({
+          title: card.title || "",
+          body: card.body || card.content || "",
+          detail: card.detail || undefined,
+        }));
+        setCards(mappedCards.length ? mappedCards : fallbackCards);
         setLoading(false);
       })
       .catch(() => {
-        setCards(buildPrimerCards(skill));
+        setCards(fallbackCards);
         setLoading(false);
       });
-  }, [sprintId, skill]);
+  }, [sprintId, skill, isSubSkillSprint, subSkill]);
 
   const handleNext = () => {
     if (currentCard < cards.length - 1) {

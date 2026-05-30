@@ -21,14 +21,26 @@ from app.ai.prompts import (
 
 router = APIRouter()
 
+# Simple in-memory cache to prevent redundant slow LLM calls and avoid timeouts/crashes
+_content_cache = {}
+
 
 # ---------------------------------------------------------------------------
 # Shared helpers
 # ---------------------------------------------------------------------------
 
-async def _get_user_context(authorization: str) -> dict:
+async def _get_user_context(authorization: Optional[str] = None) -> dict:
     """Extract user context (role, industry, seniority) from auth token."""
     supabase = get_supabase()
+    if not supabase or not authorization:
+        return {
+            "user_id": "mock-user-id",
+            "role": "Professional",
+            "department": "General",
+            "seniority": "Mid-level",
+            "industry": "Corporate",
+        }
+    
     token = authorization.replace("Bearer ", "")
     user = supabase.auth.get_user(token)
     if not user or not user.user:
@@ -54,14 +66,20 @@ async def _get_user_context(authorization: str) -> dict:
 async def _get_skill_info(skill_id: str) -> tuple[str, list[str], str]:
     """Get skill name, sub-skill names, and archetype."""
     supabase = get_supabase()
-    skill = supabase.table("skills").select("name, archetype").eq("id", skill_id).single().execute()
+    actual_skill_id = skill_id.split("--")[0] if "--" in skill_id else skill_id
+
+    if not supabase:
+        skill_name = actual_skill_id.replace("-", " ").title()
+        return skill_name, [], "conversational"
+    
+    skill = supabase.table("skills").select("name, archetype").eq("id", actual_skill_id).single().execute()
     if not skill.data:
         raise HTTPException(status_code=404, detail="Skill not found")
 
     sub_skills = (
         supabase.table("sub_skills")
         .select("name")
-        .eq("skill_id", skill_id)
+        .eq("skill_id", actual_skill_id)
         .order("difficulty_level")
         .execute()
     )
@@ -77,18 +95,31 @@ async def _get_skill_info(skill_id: str) -> tuple[str, list[str], str]:
 @router.get("/primer")
 async def generate_primer(
     skill_id: str = Query(...),
-    authorization: str = Header(...),
+    focus_sub_skill: Optional[str] = Query(None),
+    atomic_skills: Optional[str] = Query(None),
+    authorization: Optional[str] = Header(None),
 ):
     """AI-generate primer cards styled for the skill's archetype."""
+    cache_key = f"primer:{skill_id}:{focus_sub_skill or ''}:{atomic_skills or ''}"
+    if cache_key in _content_cache:
+        return _content_cache[cache_key]
+
     ctx = await _get_user_context(authorization)
     skill_name, sub_skills, archetype = await _get_skill_info(skill_id)
 
-    system, user = primer_cards_prompt(skill_name, sub_skills, ctx, archetype)
+    atomic_list = [atom.strip() for atom in atomic_skills.split(",") if atom.strip()] if atomic_skills else None
+
+    system, user = primer_cards_prompt(
+        skill_name, sub_skills, ctx, archetype,
+        focus_sub_skill=focus_sub_skill,
+        atomic_skills=atomic_list
+    )
     result = await chat_completion_json(system, user, temperature=0.8)
 
     if not result.get("cards"):
         raise HTTPException(status_code=502, detail="AI failed to generate primer cards")
 
+    _content_cache[cache_key] = result
     return result
 
 
@@ -99,18 +130,31 @@ async def generate_primer(
 @router.get("/micro-skills")
 async def generate_micro_skills(
     skill_id: str = Query(...),
-    authorization: str = Header(...),
+    focus_sub_skill: Optional[str] = Query(None),
+    atomic_skills: Optional[str] = Query(None),
+    authorization: Optional[str] = Header(None),
 ):
     """AI-generate micro-skill breakdowns styled for the skill's archetype."""
+    cache_key = f"micro_skills:{skill_id}:{focus_sub_skill or ''}:{atomic_skills or ''}"
+    if cache_key in _content_cache:
+        return _content_cache[cache_key]
+
     ctx = await _get_user_context(authorization)
     skill_name, sub_skills, archetype = await _get_skill_info(skill_id)
 
-    system, user = micro_skills_prompt(skill_name, sub_skills, ctx, archetype)
+    atomic_list = [atom.strip() for atom in atomic_skills.split(",") if atom.strip()] if atomic_skills else None
+
+    system, user = micro_skills_prompt(
+        skill_name, sub_skills, ctx, archetype,
+        focus_sub_skill=focus_sub_skill,
+        atomic_skills=atomic_list
+    )
     result = await chat_completion_json(system, user, temperature=0.7)
 
     if not result.get("microSkills"):
         raise HTTPException(status_code=502, detail="AI failed to generate micro-skills")
 
+    _content_cache[cache_key] = result
     return result
 
 
@@ -121,18 +165,31 @@ async def generate_micro_skills(
 @router.get("/drills")
 async def generate_drills(
     skill_id: str = Query(...),
-    authorization: str = Header(...),
+    focus_sub_skill: Optional[str] = Query(None),
+    atomic_skills: Optional[str] = Query(None),
+    authorization: Optional[str] = Header(None),
 ):
     """AI-generate practice drills appropriate for the skill's archetype."""
+    cache_key = f"drills:{skill_id}:{focus_sub_skill or ''}:{atomic_skills or ''}"
+    if cache_key in _content_cache:
+        return _content_cache[cache_key]
+
     ctx = await _get_user_context(authorization)
     skill_name, sub_skills, archetype = await _get_skill_info(skill_id)
 
-    system, user = drills_prompt(skill_name, sub_skills, ctx, archetype)
+    atomic_list = [atom.strip() for atom in atomic_skills.split(",") if atom.strip()] if atomic_skills else None
+
+    system, user = drills_prompt(
+        skill_name, sub_skills, ctx, archetype,
+        focus_sub_skill=focus_sub_skill,
+        atomic_skills=atomic_list
+    )
     result = await chat_completion_json(system, user, temperature=0.8)
 
     if not result.get("drills"):
         raise HTTPException(status_code=502, detail="AI failed to generate drills")
 
+    _content_cache[cache_key] = result
     return result
 
 
@@ -144,9 +201,13 @@ async def generate_drills(
 async def generate_scenarios(
     skill_id: str = Query(...),
     mode: str = Query("guided"),
-    authorization: str = Header(...),
+    authorization: Optional[str] = Header(None),
 ):
     """AI-generate contextual simulation scenarios (conversational archetype only)."""
+    cache_key = f"scenarios:{skill_id}:{mode}"
+    if cache_key in _content_cache:
+        return _content_cache[cache_key]
+
     ctx = await _get_user_context(authorization)
     skill_name, sub_skills, archetype = await _get_skill_info(skill_id)
 
@@ -162,6 +223,7 @@ async def generate_scenarios(
     if not result.get("scenarios"):
         raise HTTPException(status_code=502, detail="AI failed to generate scenarios")
 
+    _content_cache[cache_key] = result
     return result
 
 
@@ -173,9 +235,13 @@ async def generate_scenarios(
 async def generate_reasoning_challenge(
     skill_id: str = Query(...),
     mode: str = Query("assumptions"),  # assumptions | evidence | counterfactual
-    authorization: str = Header(...),
+    authorization: Optional[str] = Header(None),
 ):
     """AI-generate a reasoning workspace challenge (analytical archetype only)."""
+    cache_key = f"reasoning_challenge:{skill_id}:{mode}"
+    if cache_key in _content_cache:
+        return _content_cache[cache_key]
+
     ctx = await _get_user_context(authorization)
     skill_name, sub_skills, archetype = await _get_skill_info(skill_id)
 
@@ -191,6 +257,7 @@ async def generate_reasoning_challenge(
     if not result.get("challenge_type"):
         raise HTTPException(status_code=502, detail="AI failed to generate reasoning challenge")
 
+    _content_cache[cache_key] = result
     return result
 
 
@@ -208,7 +275,7 @@ class ReasoningSubmission(BaseModel):
 @router.post("/reasoning-challenge/evaluate")
 async def evaluate_reasoning(
     body: ReasoningSubmission,
-    authorization: str = Header(...),
+    authorization: Optional[str] = Header(None),
 ):
     """Evaluate a user's analytical reasoning workspace submission."""
     from app.ai.prompts import reasoning_evaluation_prompt
@@ -251,7 +318,7 @@ async def evaluate_reasoning(
 async def generate_reflection_prompt(
     skill_id: str = Query(...),
     session_number: int = Query(1),
-    authorization: str = Header(...),
+    authorization: Optional[str] = Header(None),
 ):
     """AI-generate a guided journaling session (reflective archetype only)."""
     ctx = await _get_user_context(authorization)
@@ -285,7 +352,7 @@ class ReflectionEntryRequest(BaseModel):
 @router.post("/reflection-entry/analyze")
 async def analyze_reflection_entry(
     body: ReflectionEntryRequest,
-    authorization: str = Header(...),
+    authorization: Optional[str] = Header(None),
 ):
     """Analyze a single guided reflection journal entry."""
     await _get_user_context(authorization)
@@ -320,7 +387,7 @@ class PatternDetectionRequest(BaseModel):
 @router.post("/pattern-detection")
 async def detect_patterns(
     body: PatternDetectionRequest,
-    authorization: str = Header(...),
+    authorization: Optional[str] = Header(None),
 ):
     """Analyze multiple reflection entries to detect behavioral/emotional patterns."""
     await _get_user_context(authorization)
@@ -347,7 +414,7 @@ class GrowthPlanRequest(BaseModel):
 @router.post("/growth-plan")
 async def generate_growth_plan(
     body: GrowthPlanRequest,
-    authorization: str = Header(...),
+    authorization: Optional[str] = Header(None),
 ):
     """Generate a 30-day behavioral growth plan from detected patterns."""
     ctx = await _get_user_context(authorization)

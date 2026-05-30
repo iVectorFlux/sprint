@@ -1445,8 +1445,10 @@ a:hover {
 }
 
 .sprint-flow-stage-pill-active {
-  background-color: var(--primary-container);
-  color: var(--on-primary);
+  background-color: var(--primary-container) !important;
+  color: var(--on-primary) !important;
+  border-radius: 20px !important;
+  border-bottom: none !important;
 }
 
 .sprint-flow-stage-pill-completed {
@@ -2168,8 +2170,10 @@ a:hover {
 }
 .sprint-flow-stage-pill:hover { color: var(--text-secondary); }
 .sprint-flow-stage-pill-active {
-  color: var(--primary-container);
-  border-bottom-color: var(--primary-container);
+  background-color: var(--primary-container) !important;
+  color: var(--on-primary) !important;
+  border-radius: 20px !important;
+  border-bottom: none !important;
   font-weight: 600;
 }
 .sprint-flow-stage-pill-completed { color: var(--success); }

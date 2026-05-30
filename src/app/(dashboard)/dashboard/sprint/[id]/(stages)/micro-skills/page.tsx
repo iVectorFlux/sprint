@@ -6,15 +6,15 @@ import { api } from "@/lib/api";
 import { useSprintStore } from "@/stores/useSprintStore";
 import { useProgressStore } from "@/stores/useProgressStore";
 import { useSprintContext } from "@/hooks/useSprintContext";
-import type { SkillTaxonomyEntry } from "@/data/skills-taxonomy";
+import type { SkillTaxonomyEntry, SubSkillEntry } from "@/data/skills-taxonomy";
 
 interface MicroSkill {
   id: string;
   name: string;
   whatItIs: string;
   whyItMatters: string;
-  howToApply: string;
-  commonMistake: string;
+  goodExample: string;
+  badExample: string;
 }
 
 /**
@@ -37,42 +37,130 @@ function buildMicroSkills(skill: SkillTaxonomyEntry): MicroSkill[] {
       "Business Skills": `In revenue-driving roles, ${sub.name.toLowerCase()} is the difference between transactional interactions and strategic partnerships. Mastering it creates compounding value over time.`,
     };
 
-    // Generate contextual "how to apply" based on archetype
-    const howContexts: Record<string, string> = {
-      conversational: `Practice this through realistic role-play scenarios. Start by observing what ${sub.name.toLowerCase()} looks like in action, then try applying it in low-stakes situations. Pay attention to how others respond differently when you use it deliberately versus when you don't.`,
-      reflective: `Build this through structured self-reflection. After any significant interaction, ask yourself: "How did I apply ${sub.name.toLowerCase()} here? What would I do differently?" Track your patterns over time — the goal is to move from unconscious habit to conscious choice.`,
-      analytical: `Develop this through deliberate analysis exercises. When facing problems or decisions, explicitly apply ${sub.name.toLowerCase()} as a distinct step in your process. Over time, it becomes a natural part of how you think, not an extra effort.`,
-      creation: `Develop this through deliberate creation practice. Draft → get feedback → revise. The key is to produce work, expose it to critique, and iterate systematically.`,
-      performance: `Build this through progressive exposure. Start with mild challenges that require ${sub.name.toLowerCase()}, then gradually increase the complexity and pressure.`,
-      systems: `Practice this within deliberately limited environments. Constraints actually improve ${sub.name.toLowerCase()} because they force you to be creative and systematic rather than defaulting to the first approach.`,
+    const goodExamples: Record<string, string> = {
+      conversational: `Applying ${sub.name.toLowerCase()} thoughtfully in dialogue:\n"I hear your concern about the timeline. Let's look at the core requirements first so we can secure the launch date, then map out the nice-to-haves."`,
+      reflective: `A deep, high-receptivity journal entry on ${sub.name.toLowerCase()}:\n"I noticed my default response today was slightly defensive when questioned. In retrospect, I should have acknowledged their intent first before explaining the details."`,
+      analytical: `A rigorous, logically structured application of ${sub.name.toLowerCase()}:\n"Based on the data, option A has the highest probability of success. However, the critical assumption here is that user growth continues at 5% month-over-month. Let's stress-test that."`,
     };
 
-    // Generate contextual "common mistake" based on sub-skill
-    const commonMistakes: Record<string, string> = {};
-    // Use difficulty level to indicate sophistication of the mistake
-    const mistakeByDifficulty = [
-      "",
-      `Confusing knowing about ${sub.name.toLowerCase()} with actually being able to do it. Knowledge and application are different — you need deliberate practice, not just awareness.`,
-      `Applying ${sub.name.toLowerCase()} only in comfortable situations. The real test is whether you can maintain it under pressure, uncertainty, or when dealing with difficult people.`,
-      `Treating ${sub.name.toLowerCase()} as a technique to deploy rather than a capability to embody. People can tell when you're "performing" a skill versus genuinely applying it.`,
-      `Overcomplicating ${sub.name.toLowerCase()} by trying to be perfect. Start simple — even a 20% improvement in how you apply this skill creates noticeable results in how others respond to you.`,
-      `Underestimating how long it takes to truly master ${sub.name.toLowerCase()}. This is a deep skill that takes months of deliberate practice to internalize. Be patient with yourself, but be consistent.`,
-    ];
+    const badExamples: Record<string, string> = {
+      conversational: `Reacting without employing ${sub.name.toLowerCase()} in dialogue:\n"No, we can't do that. The timeline is completely impossible and we don't have the resources."`,
+      reflective: `A shallow, low-awareness reflection on ${sub.name.toLowerCase()}:\n"The meeting was fine but they didn't listen to me. I did my part perfectly, but the team's alignment was poor."`,
+      analytical: `A superficial or biased application of ${sub.name.toLowerCase()}:\n"Option A seems like the best approach because it's what we did last quarter and everybody liked it."`,
+    };
 
     return {
       id: String(i + 1),
       name: sub.name,
-      whatItIs: sub.description + ` At difficulty level ${sub.difficulty_level}/5, this is ${sub.difficulty_level <= 2 ? "one of the more accessible skills to start building" : sub.difficulty_level <= 3 ? "a moderately challenging skill that requires consistent practice" : "an advanced capability that takes significant deliberate effort to develop"}.`,
+      whatItIs: sub.description,
       whyItMatters: whyContexts[category] || whyContexts["Human Skills"],
-      howToApply: howContexts[archetype] || howContexts["conversational"],
-      commonMistake: commonMistakes[sub.name] || mistakeByDifficulty[Math.min(sub.difficulty_level, 5)] || mistakeByDifficulty[3],
+      goodExample: goodExamples[archetype] || goodExamples["conversational"],
+      badExample: badExamples[archetype] || badExamples["conversational"],
+    };
+  });
+}
+
+/**
+ * Build micro-skill content from a sub-skill's atomic skills.
+ * When a learner starts e.g. "Active Listening", the micro-skills page
+ * shows Paraphrasing, Reflective Questioning, etc. \u2014 not all 8 Communication sub-skills.
+ */
+const CUSTOM_EXAMPLES: Record<string, { good: string; bad: string }> = {
+  // Storytelling
+  "Narrative Arc Construction": {
+    good: `Constructing a clear journey with stakes and resolution:\n"We started last quarter with a 40% drop in checkout retention (Tension). Our team did deep user testing and found a 3-step checkout form was confusing users (Climax). We consolidated it into a single page, and retention immediately rebounded to normal levels (Resolution)."`,
+    bad: `Listing facts without a narrative structure:\n"We had a checkout retention drop but we fixed it by consolidating the pages in our last release."`,
+  },
+  "Emotional Hook Setting": {
+    good: `Opening with a vivid, relatable moment to engage the audience:\n"Imagine it's 8:55 PM on a Friday. The system goes completely dark, and our biggest enterprise client is on the phone..."`,
+    bad: `Starting with dry background details:\n"We had a system outage last Friday evening, which was a very difficult situation for our operations team."`,
+  },
+  "Concrete Detail Selection": {
+    good: `Choosing sensory, tangible details over general abstractions:\n"Instead of saying 'the server crashed', say 'a database memory leak consumed 64GB of RAM in 3 seconds, triggering the hardware alarm'."`,
+    bad: `Using vague, abstract language:\n"The server had a critical error and stopped working completely."`,
+  },
+  "Audience-Relevant Framing": {
+    good: `Tailoring the stakes to what matters to the specific audience:\n"For the finance team, focus on the $50k daily revenue risk. For the engineering team, focus on the 500-error rates in the API gateway."`,
+    bad: `Giving the exact same generic explanation to everyone:\n"I gave the exact same technical slideshow to the CEO, the sales team, and the operations team."`,
+  },
+  "Punchline Delivery": {
+    good: `Landing the key takeaway with maximum clarity:\n"And that is why simplicity always wins: because a feature the user cannot find is a feature that does not exist."`,
+    bad: `Trailing off with a weak summary:\n"So in conclusion, we decided to prioritize usability over adding more new features next quarter."`,
+  },
+
+  // Active Listening
+  "Paraphrasing": {
+    good: `Restating the core message in your own words to confirm understanding:\n"It sounds like you're saying the team is aligned on the product goals, but we lack the engineering capacity to hit the June deadline. Is that correct?"`,
+    bad: `Echoing the words exactly or over-simplifying without processing:\n"So we are late on the project."`,
+  },
+  "Reflective Questioning": {
+    good: `Asking questions that dig into the underlying meaning or feelings:\n"When you say the timeline feels 'unrealistic', is that because of the technical complexity of the database migration, or do you feel the scope itself is too broad?"`,
+    bad: `Asking a superficial or interrogative question:\n"Why do you think the timeline is unrealistic?"`,
+  },
+  "Non-verbal Acknowledgment": {
+    good: `Using physical and vocal cues to signal engagement:\n"[Maintains open body language, nods slowly to show presence, and offers brief vocal signals like 'I see' or 'Mm-hmm' without interrupting the flow.]"`,
+    bad: `Ignoring the speaker or multitasking:\n"[Stares at their screen, typing Slack messages, while occasionally saying 'yeah' to indicate they are paying attention.]"`,
+  },
+  "Emotional Validation": {
+    good: `Acknowledging the speaker's emotional state before addressing the content:\n"I can completely understand why you're frustrated by this sudden scope change. It feels like the goalposts were moved right before the finish line."`,
+    bad: `Dismissing or ignoring emotions in favor of facts:\n"I understand. But let's look at the new specifications anyway since we have to implement them."`,
+  },
+  "Summarizing": {
+    good: `Synthesizing key points from an extended dialogue:\n"To make sure we're on the same page, we've identified three key bottlenecks: first, database latency; second, a lack of documentation; and third, resource constraints. We've agreed to tackle latency first. Does that cover it?"`,
+    bad: `Offering a vague, incomplete list:\n"Okay, so we have a lot of problems to solve, but we'll start with latency."`,
+  },
+  "Silence Management": {
+    good: `Using deliberate pauses to let the speaker expand on their thoughts:\n"[Pauses for 3 seconds after the speaker finishes, allowing them to add: 'Actually, there's one more thing...', giving them space to share the underlying issue.]"`,
+    bad: `Immediately filling every pause with your own thoughts:\n"[Cuts in the millisecond the speaker stops talking to pitch their own solution: 'Well, here is what we should do...']"`,
+  },
+};
+
+function buildAtomicMicroSkills(
+  skill: SkillTaxonomyEntry,
+  subSkill: SubSkillEntry
+): MicroSkill[] {
+  const archetype = skill.archetype;
+  const category = skill.category;
+  const atomics = subSkill.atomic_skills || [];
+
+  return atomics.map((atom, i) => {
+    const whyContexts: Record<string, string> = {
+      "Human Skills": `Within ${subSkill.name.toLowerCase()}, ${atom.name.toLowerCase()} is the specific behavior that separates people who are naturally good at this from those who struggle. It's the concrete action behind the abstract concept.`,
+      "Cognitive Skills": `${atom.name} is one of the foundational reasoning behaviors within ${subSkill.name.toLowerCase()}. Developing this atomic skill strengthens the precision and rigor of your thinking in measurable ways.`,
+      "Technical Skills": `${atom.name} is a specific, repeatable technique within ${subSkill.name.toLowerCase()}. Once internalized, it becomes a reliable tool you can deploy across diverse technical challenges.`,
+      "Strategic Skills": `${atom.name} is a specific analytical behavior within ${subSkill.name.toLowerCase()} that sharpens your ability to see patterns, anticipate consequences, and make better strategic choices.`,
+      "Leadership Skills": `${atom.name} is a concrete leadership behavior within ${subSkill.name.toLowerCase()}. Leaders who practice it deliberately create better team outcomes and build stronger trust.`,
+      "Business Skills": `${atom.name} is a specific tactical skill within ${subSkill.name.toLowerCase()} that directly impacts your ability to drive revenue, build relationships, and close deals.`,
+    };
+
+    const goodExamples: Record<string, string> = {
+      conversational: `Applying ${atom.name.toLowerCase()} thoughtfully in dialogue:\n"If I understand correctly, your primary worry is that the new timeline doesn't leave enough buffer for testing. Is that right?"`,
+      reflective: `A deep, high-receptivity journal entry on ${atom.name.toLowerCase()}:\n"Today, instead of speaking immediately, I paused to let them finish. I noticed they shared two more critical constraints that I would have completely missed."`,
+      analytical: `A rigorous, logically structured application of ${atom.name.toLowerCase()}:\n"Applying this, we must first isolate the variable X. Let's outline the direct dependencies, test each assumption, and identify the root cause."`,
+    };
+
+    const badExamples: Record<string, string> = {
+      conversational: `Reacting without employing ${atom.name.toLowerCase()} in dialogue:\n"Yeah, I get it. But here is why we still need to proceed with my plan anyway..."`,
+      reflective: `A shallow, low-awareness reflection on ${atom.name.toLowerCase()}:\n"I listened to them, but their points weren't very relevant to what I was trying to build."`,
+      analytical: `A superficial or biased application of ${atom.name.toLowerCase()}:\n"We should jump straight to the conclusion because it fits our initial hypothesis perfectly."`,
+    };
+
+    const custom = CUSTOM_EXAMPLES[atom.name];
+
+    return {
+      id: String(i + 1),
+      name: atom.name,
+      whatItIs: atom.description,
+      whyItMatters: whyContexts[category] || whyContexts["Human Skills"],
+      goodExample: custom ? custom.good : (goodExamples[archetype] || goodExamples["conversational"]),
+      badExample: custom ? custom.bad : (badExamples[archetype] || badExamples["conversational"]),
     };
   });
 }
 
 export default function MicroSkillsPage() {
   const router = useRouter();
-  const { sprintId, skill, skillName, displayName, isSubSkillSprint, skillSlug, subSkillSlug } = useSprintContext();
+  const { sprintId, skill, subSkill, skillName, displayName, isSubSkillSprint, skillSlug, subSkillSlug } = useSprintContext();
   const { updateStage } = useSprintStore();
   const { setStage } = useProgressStore();
   const [skills, setSkills] = useState<MicroSkill[]>([]);
@@ -81,20 +169,39 @@ export default function MicroSkillsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!skill) { setLoading(false); return; }
+    if (!skill) {
+      if (sprintId) setLoading(false);
+      return;
+    }
     if (isSubSkillSprint) setStage(skillSlug, subSkillSlug, "micro-skill");
-
+ 
+    // Build the right fallback based on sprint type
+    const fallbackSkills = isSubSkillSprint && subSkill
+      ? buildAtomicMicroSkills(skill, subSkill)
+      : buildMicroSkills(skill);
+ 
+    const focusQuery = isSubSkillSprint && subSkill ? `&focus_sub_skill=${encodeURIComponent(subSkill.name)}` : '';
+    const atomicQuery = isSubSkillSprint && subSkill?.atomic_skills ? `&atomic_skills=${encodeURIComponent(subSkill.atomic_skills.map(a => a.name).join(','))}` : '';
+ 
     api
-      .get<{ microSkills: MicroSkill[] }>(`/api/v1/sprint/content/micro-skills?skill_id=${sprintId}`)
+      .get<{ microSkills: any[] }>(`/api/v1/sprint/content/micro-skills?skill_id=${sprintId}${focusQuery}${atomicQuery}`)
       .then((data) => {
-        setSkills(data.microSkills?.length ? data.microSkills : buildMicroSkills(skill));
+        const mappedSkills = (data.microSkills || []).map((ms: any) => ({
+          id: ms.id || "",
+          name: ms.name || "",
+          whatItIs: ms.whatItIs || ms.description || "",
+          whyItMatters: ms.whyItMatters || ms.tip || "",
+          goodExample: ms.goodExample || "",
+          badExample: ms.badExample || "",
+        }));
+        setSkills(mappedSkills.length ? mappedSkills : fallbackSkills);
         setLoading(false);
       })
       .catch(() => {
-        setSkills(buildMicroSkills(skill));
+        setSkills(fallbackSkills);
         setLoading(false);
       });
-  }, [sprintId, skill]);
+  }, [sprintId, skill, isSubSkillSprint, subSkill]);
 
   const allCompleted = skills.length > 0 && completed.size >= skills.length;
 
@@ -119,7 +226,7 @@ export default function MicroSkillsPage() {
           Micro-Skills · {completed.size} of {skills.length} reviewed
         </span>
         <h1 className="headline-md" style={{ marginBottom: 8 }}>
-          {skillName} — Core Building Blocks
+          {isSubSkillSprint && subSkill ? subSkill.name : skillName} — Core Building Blocks
         </h1>
         <p className="body-sm" style={{ marginBottom: 16 }}>
           Each micro-skill has 4 key ingredients. Read through each one carefully — you&apos;ll need this foundation for the drills and simulations ahead.
@@ -184,9 +291,6 @@ export default function MicroSkillsPage() {
                   <div style={{ fontSize: 15, fontWeight: 600, color: "var(--text-heading)" }}>
                     {ms.name}
                   </div>
-                  <div className="body-sm" style={{ marginTop: 2 }}>
-                    Difficulty: {"●".repeat(skill!.sub_skills[i]?.difficulty_level || 2)}{"○".repeat(5 - (skill!.sub_skills[i]?.difficulty_level || 2))}
-                  </div>
                 </div>
                 <span
                   style={{
@@ -224,7 +328,7 @@ export default function MicroSkillsPage() {
                     <p className="body-ui" style={{ lineHeight: 1.7 }}>{ms.whyItMatters}</p>
                   </div>
 
-                  {/* 3. How To Apply */}
+                  {/* 3. Good Example */}
                   <div
                     style={{
                       marginBottom: 16,
@@ -234,12 +338,12 @@ export default function MicroSkillsPage() {
                     }}
                   >
                     <div className="label-mono" style={{ marginBottom: 8, color: "var(--success)" }}>
-                      How To Apply
+                      Good Example
                     </div>
-                    <p className="body-ui" style={{ lineHeight: 1.7 }}>{ms.howToApply}</p>
+                    <p className="body-ui" style={{ lineHeight: 1.7, whiteSpace: "pre-line" }}>{ms.goodExample}</p>
                   </div>
 
-                  {/* 4. Common Mistake */}
+                  {/* 4. Bad Example */}
                   <div
                     style={{
                       marginBottom: 16,
@@ -249,9 +353,9 @@ export default function MicroSkillsPage() {
                     }}
                   >
                     <div className="label-mono" style={{ marginBottom: 8, color: "var(--error)" }}>
-                      Common Mistake
+                      Bad Example
                     </div>
-                    <p className="body-ui" style={{ lineHeight: 1.7 }}>{ms.commonMistake}</p>
+                    <p className="body-ui" style={{ lineHeight: 1.7, whiteSpace: "pre-line" }}>{ms.badExample}</p>
                   </div>
 
                   {!isDone && (
