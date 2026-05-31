@@ -8,7 +8,7 @@ import {
   ARCHETYPE_STAGE_FLOWS,
 } from "@/types";
 import BeginSprintButton from "@/components/sprint/BeginSprintButton";
-import { toSlug } from "@/hooks/useSprintContext";
+import { toSlug } from "@/lib/slug";
 
 export default async function SprintDetailPage({
   params,

@@ -405,3 +405,6 @@ export interface NavItem {
   icon: string
   badge?: number
 }
+
+export * from './telemetry'
+export * from './challenge'

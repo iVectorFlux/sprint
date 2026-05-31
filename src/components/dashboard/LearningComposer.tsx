@@ -2,50 +2,49 @@
 
 import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { SKILLS_TAXONOMY } from "@/data/skills-taxonomy";
-import { toSlug } from "@/hooks/useSprintContext";
+import { matchLearningGoal, PATTERN_LABELS } from "@/domain/goal-matching";
+import type { CognitivePattern } from "@/domain/goal-matching";
+import { emitPracticeEvent } from "@/lib/telemetry";
+import { api } from "@/lib/api";
 
 /**
- * LearningComposer — the dashboard entry point for describing a learning goal.
- *
- * The learner types what they want to learn (with optional context + attached
- * documents), then "Start Plan" matches the intent to skills that exist in the
- * catalog. Only real catalog matches are suggested — no fallback guesses.
+ * LearningComposer — dashboard entry for describing a learning goal or challenge.
+ * Uses the rules-first capability resolver (~90% catalog path).
  */
 
-type SkillMatch = { name: string; icon: string; subtitle: string; href: string };
+type SkillSuggestion = {
+  name: string;
+  icon: string;
+  subtitle: string;
+  href: string;
+};
 
-function matchSuggestions(query: string): SkillMatch[] {
-  const q = query.toLowerCase().trim();
-  if (!q) return [];
-  const words = q.split(/\s+/).filter((w) => w.length > 2);
+function buildSuggestions(resolution: ReturnType<typeof matchLearningGoal>): {
+  skills: SkillSuggestion[];
+  patternLabels: string[];
+  path: "catalog" | "novel";
+} {
+  const skills = resolution.skills.map((s) => {
+    const patternHint =
+      s.matchedPatterns.length > 0
+        ? ` · ${s.matchedPatterns
+            .slice(0, 2)
+            .map((p) => PATTERN_LABELS[p as CognitivePattern])
+            .join(", ")}`
+        : "";
+    return {
+      name: s.name,
+      icon: s.icon,
+      subtitle: `${s.subSkillCount} sub-skills · ${s.category}${patternHint}`,
+      href: `/dashboard/sprint/${s.slug}`,
+    };
+  });
 
-  return SKILLS_TAXONOMY.map((skill) => {
-    let score = 0;
-    const name = skill.name.toLowerCase();
-    if (q.includes(name)) score += 10;
-    if (q.includes(skill.category.toLowerCase())) score += 4;
-
-    // Token overlap against name + sub-skills (more reliable than substring).
-    words.forEach((w) => {
-      if (name.includes(w)) score += 4;
-      skill.sub_skills.forEach((sub) => {
-        const subName = sub.name.toLowerCase();
-        if (q.includes(subName)) score += 8;
-        else if (subName.includes(w)) score += 3;
-      });
-    });
-    return { skill, score };
-  })
-    .filter((s) => s.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 4)
-    .map<SkillMatch>((s) => ({
-      name: s.skill.name,
-      icon: s.skill.icon,
-      subtitle: `${s.skill.sub_skills.length} sub-skills · ${s.skill.category}`,
-      href: `/dashboard/sprint/${toSlug(s.skill.name)}`,
-    }));
+  return {
+    skills,
+    patternLabels: resolution.patternLabels,
+    path: resolution.path,
+  };
 }
 
 export default function LearningComposer() {
@@ -55,7 +54,11 @@ export default function LearningComposer() {
 
   const [goal, setGoal] = useState("");
   const [files, setFiles] = useState<string[]>([]);
-  const [suggestions, setSuggestions] = useState<SkillMatch[] | null>(null);
+  const [suggestions, setSuggestions] = useState<SkillSuggestion[] | null>(null);
+  const [patternLabels, setPatternLabels] = useState<string[] | null>(null);
+  const [resolutionPath, setResolutionPath] = useState<"catalog" | "novel" | null>(
+    null
+  );
 
   const autoGrow = useCallback(() => {
     const el = textareaRef.current;
@@ -72,9 +75,29 @@ export default function LearningComposer() {
 
   const removeFile = (name: string) => setFiles((prev) => prev.filter((f) => f !== name));
 
-  const handleStartPlan = () => {
+  const handleStartPlan = async () => {
     if (!goal.trim()) return;
-    setSuggestions(matchSuggestions(goal));
+    const resolution = matchLearningGoal(goal);
+    const result = buildSuggestions(resolution);
+    setSuggestions(result.skills);
+    setPatternLabels(result.patternLabels);
+    setResolutionPath(result.path);
+
+    void emitPracticeEvent({
+      event_type: "goal_submitted",
+      cognitive_patterns: resolution.inferredPatterns,
+    });
+
+    try {
+      await api.post("/api/v1/challenges", {
+        title: goal.trim().slice(0, 200),
+        raw_context: goal.trim(),
+        inferred_skill_slugs: resolution.skills.map((s) => s.slug),
+        inferred_patterns: resolution.inferredPatterns,
+      });
+    } catch {
+      // Offline or unauthenticated — composer still works
+    }
   };
 
   return (
@@ -109,7 +132,7 @@ export default function LearningComposer() {
           onKeyDown={(e) => {
             if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleStartPlan();
           }}
-          placeholder="Describe what you want to learn…"
+          placeholder="Describe a challenge or what you want to practice…"
           rows={1}
           id="learning-composer-input"
         />
@@ -142,26 +165,40 @@ export default function LearningComposer() {
             disabled={!goal.trim()}
             id="learning-composer-start"
           >
-            Start Plan →
+            Find practice →
           </button>
         </div>
       </div>
 
       <p className="body-sm" style={{ color: "var(--text-muted)", marginTop: 8 }}>
-        Tell us what you want to learn and any context (your role, a situation, or attach a
-        recent report or performance summary). We&apos;ll suggest the right practice.
+        Describe a workplace challenge or skill goal. We map it to capabilities in our catalog—no
+        random suggestions.
       </p>
 
       {suggestions && suggestions.length === 0 && (
         <div style={{ marginTop: 20 }}>
           <div className="guidance-box" style={{ padding: 16 }}>
             <p className="body-sm" style={{ margin: 0, color: "var(--text-secondary)" }}>
-              We don&apos;t have a sprint for that yet. Try describing it differently, or browse
-              the{" "}
+              {resolutionPath === "novel" ? (
+                <>
+                  This goal doesn&apos;t map cleanly to our catalog yet (custom learning paths
+                  coming later). Try framing it as a capability—e.g. communication, judgment,
+                  negotiation—or browse the{" "}
+                </>
+              ) : (
+                <>No close match. Try different words or browse the </>
+              )}
               <button
                 type="button"
                 onClick={() => router.push("/dashboard/catalog")}
-                style={{ background: "none", border: "none", padding: 0, color: "var(--primary-container)", cursor: "pointer", fontWeight: 600 }}
+                style={{
+                  background: "none",
+                  border: "none",
+                  padding: 0,
+                  color: "var(--primary-container)",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                }}
               >
                 Skills Catalog
               </button>
@@ -173,8 +210,14 @@ export default function LearningComposer() {
 
       {suggestions && suggestions.length > 0 && (
         <div style={{ marginTop: 20 }}>
+          {patternLabels && patternLabels.length > 0 && (
+            <p className="body-sm" style={{ color: "var(--text-muted)", marginBottom: 10 }}>
+              Capabilities we detected:{" "}
+              {patternLabels.slice(0, 5).join(" · ")}
+            </p>
+          )}
           <h3 className="headline-sm" style={{ marginBottom: 12 }}>
-            Suggested practice
+            Suggested sprints
           </h3>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {suggestions.map((s) => (
@@ -197,7 +240,13 @@ export default function LearningComposer() {
                 <span style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <span style={{ fontSize: 24 }}>{s.icon}</span>
                   <span>
-                    <span style={{ display: "block", fontWeight: 600, color: "var(--text-heading)" }}>
+                    <span
+                      style={{
+                        display: "block",
+                        fontWeight: 600,
+                        color: "var(--text-heading)",
+                      }}
+                    >
                       {s.name}
                     </span>
                     <span className="body-sm" style={{ color: "var(--text-muted)" }}>

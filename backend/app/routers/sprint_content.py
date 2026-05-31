@@ -7,6 +7,7 @@ from typing import Optional
 from app.db import get_supabase
 from app.ai.llm import chat_completion_json
 from app.ai.archetypes import resolve_archetype, archetype_from_skill
+from app.services.learner_context import learner_context_from_auth
 from app.ai.prompts import (
     primer_cards_prompt,
     micro_skills_prompt,
@@ -30,37 +31,21 @@ _content_cache = {}
 # ---------------------------------------------------------------------------
 
 async def _get_user_context(authorization: Optional[str] = None) -> dict:
-    """Extract user context (role, industry, seniority) from auth token."""
-    supabase = get_supabase()
-    if not supabase or not authorization:
-        return {
-            "user_id": "mock-user-id",
-            "role": "Professional",
-            "department": "General",
-            "seniority": "Mid-level",
-            "industry": "Corporate",
-        }
-    
-    token = authorization.replace("Bearer ", "")
-    user = supabase.auth.get_user(token)
-    if not user or not user.user:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+    """Rich learner context for personalized AI content."""
+    if authorization:
+        supabase = get_supabase()
+        if supabase:
+            token = authorization.replace("Bearer ", "")
+            user = supabase.auth.get_user(token)
+            if not user or not user.user:
+                raise HTTPException(status_code=401, detail="Unauthorized")
+    return await learner_context_from_auth(authorization)
 
-    profile = (
-        supabase.table("users")
-        .select("role, department, seniority, country")
-        .eq("id", user.user.id)
-        .single()
-        .execute()
-    )
-    data = profile.data or {}
-    return {
-        "user_id": user.user.id,
-        "role": data.get("role") or "Professional",
-        "department": data.get("department") or "General",
-        "seniority": data.get("seniority") or "Mid-level",
-        "industry": "Corporate",
-    }
+
+def _cache_key(prefix: str, ctx: dict, *parts: str) -> str:
+    """Per-user cache so drills/scenarios are not shared across learners."""
+    uid = ctx.get("user_id", "anon")[:8]
+    return f"{prefix}:{uid}:{':'.join(parts)}"
 
 
 async def _get_skill_info(skill_id: str) -> tuple[str, list[str], str]:
@@ -100,11 +85,10 @@ async def generate_primer(
     authorization: Optional[str] = Header(None),
 ):
     """AI-generate primer cards styled for the skill's archetype."""
-    cache_key = f"primer:{skill_id}:{focus_sub_skill or ''}:{atomic_skills or ''}"
+    ctx = await _get_user_context(authorization)
+    cache_key = _cache_key("primer", ctx, skill_id, focus_sub_skill or "", atomic_skills or "")
     if cache_key in _content_cache:
         return _content_cache[cache_key]
-
-    ctx = await _get_user_context(authorization)
     skill_name, sub_skills, archetype = await _get_skill_info(skill_id)
 
     atomic_list = [atom.strip() for atom in atomic_skills.split(",") if atom.strip()] if atomic_skills else None
@@ -135,11 +119,10 @@ async def generate_micro_skills(
     authorization: Optional[str] = Header(None),
 ):
     """AI-generate micro-skill breakdowns styled for the skill's archetype."""
-    cache_key = f"micro_skills:{skill_id}:{focus_sub_skill or ''}:{atomic_skills or ''}"
+    ctx = await _get_user_context(authorization)
+    cache_key = _cache_key("micro_skills", ctx, skill_id, focus_sub_skill or "", atomic_skills or "")
     if cache_key in _content_cache:
         return _content_cache[cache_key]
-
-    ctx = await _get_user_context(authorization)
     skill_name, sub_skills, archetype = await _get_skill_info(skill_id)
 
     atomic_list = [atom.strip() for atom in atomic_skills.split(",") if atom.strip()] if atomic_skills else None
@@ -170,11 +153,10 @@ async def generate_drills(
     authorization: Optional[str] = Header(None),
 ):
     """AI-generate practice drills appropriate for the skill's archetype."""
-    cache_key = f"drills:{skill_id}:{focus_sub_skill or ''}:{atomic_skills or ''}"
+    ctx = await _get_user_context(authorization)
+    cache_key = _cache_key("drills", ctx, skill_id, focus_sub_skill or "", atomic_skills or "")
     if cache_key in _content_cache:
         return _content_cache[cache_key]
-
-    ctx = await _get_user_context(authorization)
     skill_name, sub_skills, archetype = await _get_skill_info(skill_id)
 
     atomic_list = [atom.strip() for atom in atomic_skills.split(",") if atom.strip()] if atomic_skills else None
@@ -204,11 +186,10 @@ async def generate_scenarios(
     authorization: Optional[str] = Header(None),
 ):
     """AI-generate contextual simulation scenarios (conversational archetype only)."""
-    cache_key = f"scenarios:{skill_id}:{mode}"
+    ctx = await _get_user_context(authorization)
+    cache_key = _cache_key("scenarios", ctx, skill_id, mode)
     if cache_key in _content_cache:
         return _content_cache[cache_key]
-
-    ctx = await _get_user_context(authorization)
     skill_name, sub_skills, archetype = await _get_skill_info(skill_id)
 
     if archetype != "conversational":
@@ -238,11 +219,10 @@ async def generate_reasoning_challenge(
     authorization: Optional[str] = Header(None),
 ):
     """AI-generate a reasoning workspace challenge (analytical archetype only)."""
-    cache_key = f"reasoning_challenge:{skill_id}:{mode}"
+    ctx = await _get_user_context(authorization)
+    cache_key = _cache_key("reasoning_challenge", ctx, skill_id, mode)
     if cache_key in _content_cache:
         return _content_cache[cache_key]
-
-    ctx = await _get_user_context(authorization)
     skill_name, sub_skills, archetype = await _get_skill_info(skill_id)
 
     if archetype != "analytical":

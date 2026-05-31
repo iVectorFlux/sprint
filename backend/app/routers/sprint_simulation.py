@@ -23,6 +23,11 @@ from app.ai.prompts import (
     simulation_opening_prompt,
     simulation_evaluation_prompt,
 )
+from app.services.simulation_session_store import (
+    delete_simulation_session,
+    load_simulation_session,
+    save_simulation_session,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -50,19 +55,6 @@ class SendMessageRequest(BaseModel):
 
 class EndSimulationRequest(BaseModel):
     simulation_id: str
-
-
-# ---------------------------------------------------------------------------
-# In-memory simulation sessions (production would use Redis)
-# ---------------------------------------------------------------------------
-
-_sessions: dict[str, dict] = {}
-
-
-def _get_session(sim_id: str) -> dict:
-    if sim_id not in _sessions:
-        raise HTTPException(status_code=404, detail="Simulation session not found. It may have expired.")
-    return _sessions[sim_id]
 
 
 # ---------------------------------------------------------------------------
@@ -175,29 +167,10 @@ def _extract_coach_data(text: str) -> tuple[str, dict | None]:
 
 
 async def _get_user_context(user_id: str) -> dict:
-    """Fetch user context for prompt personalization."""
-    supabase = get_supabase()
-    if not supabase:
-        return {
-            "role": "Professional",
-            "department": "General",
-            "seniority": "Mid-level",
-            "industry": "Corporate",
-        }
-    profile = (
-        supabase.table("users")
-        .select("role, department, seniority, country")
-        .eq("id", user_id)
-        .single()
-        .execute()
-    )
-    data = profile.data or {}
-    return {
-        "role": data.get("role") or "Professional",
-        "department": data.get("department") or "General",
-        "seniority": data.get("seniority") or "Mid-level",
-        "industry": "Corporate",
-    }
+    """Rich learner context for simulation character behavior."""
+    from app.services.learner_context import build_learner_context
+
+    return await build_learner_context(user_id)
 
 
 # ---------------------------------------------------------------------------
@@ -264,7 +237,7 @@ async def start_simulation(
         "content": opening_text,
     }
 
-    _sessions[sim_id] = {
+    session_data = {
         "simulation_id": sim_id,
         "sprint_id": sprint_id,
         "user_id": user_id,
@@ -286,11 +259,12 @@ async def start_simulation(
         "coach_hints": [],
         "started_at": datetime.now(timezone.utc).isoformat(),
     }
+    await save_simulation_session(sim_id, session_data)
 
     return {
         "simulationId": sim_id,
         "messages": [opening_msg],
-        "state": _sessions[sim_id]["state"],
+        "state": session_data["state"],
     }
 
 
@@ -312,7 +286,7 @@ async def send_message(
         if not user or not user.user:
             raise HTTPException(status_code=401, detail="Unauthorized")
 
-    session = _get_session(body.simulation_id)
+    session = await load_simulation_session(body.simulation_id)
 
     # Add user message to conversation
     session["messages"].append({"role": "user", "content": body.content})
@@ -356,6 +330,7 @@ async def send_message(
             response_data["turnScores"] = coach_data["turnScores"]
 
     response_data["state"] = session["state"]
+    await save_simulation_session(body.simulation_id, session)
     return response_data
 
 
@@ -378,7 +353,7 @@ async def end_simulation(
             raise HTTPException(status_code=401, detail="Unauthorized")
         user_id = user.user.id
 
-    session = _get_session(body.simulation_id)
+    session = await load_simulation_session(body.simulation_id)
 
     # Build transcript for evaluation
     transcript = [
@@ -419,7 +394,6 @@ async def end_simulation(
         }
         supabase.table("simulation_attempts").insert(attempt_data).execute()
 
-    # Clean up session
-    del _sessions[body.simulation_id]
+    await delete_simulation_session(body.simulation_id)
 
     return {"evaluation": evaluation}

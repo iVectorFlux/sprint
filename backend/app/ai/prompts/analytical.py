@@ -1,5 +1,7 @@
 """Prompt modules — import from app.ai.prompts (package)."""
 from __future__ import annotations
+
+from app.services.learner_context import format_personalization_block
 from typing import Optional
 
 def reasoning_challenge_prompt(
@@ -92,6 +94,7 @@ def reasoning_challenge_prompt(
         f"Industry: {user_context.get('industry', 'General')}\n\n"
         f"Instructions: {spec['instruction']}\n\n"
         f"Return JSON:\n{spec['output_format']}"
+        f"{format_personalization_block(user_context)}"
     )
     return system, user
 

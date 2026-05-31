@@ -7,6 +7,7 @@ import { useProgressStore } from "@/stores/useProgressStore";
 import { SKILLS_TAXONOMY } from "@/data/skills-taxonomy";
 import { toSlug } from "@/hooks/useSprintContext";
 import SprintGenerationLoader from "@/components/sprint/SprintGenerationLoader";
+import { getFirstStageUrl } from "@/domain/practice";
 
 interface BeginSprintButtonProps {
   skillSlug: string;
@@ -67,7 +68,8 @@ export default function BeginSprintButton({ skillSlug, skillName }: BeginSprintB
   };
 
   const handleLoaderComplete = () => {
-    router.push(`/dashboard/sprint/${skillSlug}/primer`);
+    const archetype = skill?.archetype ?? "conversational";
+    router.push(getFirstStageUrl(skillSlug, archetype));
   };
 
   if (showLoader) {

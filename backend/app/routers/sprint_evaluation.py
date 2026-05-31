@@ -35,26 +35,9 @@ async def _auth_user(authorization: Optional[str] = None) -> str:
 
 
 async def _get_user_context(user_id: str) -> dict:
-    supabase = get_supabase()
-    if not supabase:
-        return {
-            "role": "Professional",
-            "industry": "Corporate",
-            "seniority": "Mid-level",
-        }
-    profile = (
-        supabase.table("users")
-        .select("role, department, seniority")
-        .eq("id", user_id)
-        .single()
-        .execute()
-    )
-    data = profile.data or {}
-    return {
-        "role": data.get("role") or "Professional",
-        "industry": "Corporate",
-        "seniority": data.get("seniority") or "Mid-level",
-    }
+    from app.services.learner_context import build_learner_context
+
+    return await build_learner_context(user_id)
 
 
 async def _verify_sprint(sprint_id: str, user_id: str) -> dict:

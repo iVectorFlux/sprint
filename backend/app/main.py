@@ -11,6 +11,7 @@ import os
 
 from app.routers import skills, sprints, users, simulations, health
 from app.routers import sprint_content, sprint_simulation, sprint_evaluation
+from app.routers import telemetry, challenges
 from app.routers import dev as dev_router
 
 load_dotenv()
@@ -49,6 +50,8 @@ app.include_router(health.router, tags=["Health"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["Users"])
 app.include_router(skills.router, prefix="/api/v1/skills", tags=["Skills"])
 app.include_router(sprints.router, prefix="/api/v1/sprints", tags=["Sprints"])
+app.include_router(telemetry.router, prefix="/api/v1/telemetry", tags=["Telemetry"])
+app.include_router(challenges.router, prefix="/api/v1/challenges", tags=["Challenges"])
 app.include_router(simulations.router, prefix="/api/v1/simulations", tags=["Simulations"])
 
 # AI-native sprint endpoints

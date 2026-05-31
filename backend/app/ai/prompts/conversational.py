@@ -2,6 +2,8 @@
 from __future__ import annotations
 from typing import Optional
 
+from app.services.learner_context import format_personalization_block
+
 def simulation_character_prompt(
     scenario: dict,
     skill_name: str,
@@ -45,6 +47,8 @@ def simulation_character_prompt(
         "5. Have a hidden agenda or concern that the user needs to uncover through good listening.\n"
         f"6. The user is a {user_context.get('role', 'Professional')} "
         f"in {user_context.get('industry', 'a corporate setting')}.\n"
+        "7. Reflect their goals, weaknesses, and past practice from learner context when reacting.\n"
+        f"{format_personalization_block(user_context)}"
         f"{coaching_note}"
     )
 

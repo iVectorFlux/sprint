@@ -4,23 +4,20 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Header
 from app.db import get_supabase
 from app.schemas import SprintResponse, CreateSprintRequest, StageType
+from app.ai.archetypes import get_stage_flow, archetype_from_skill
 
 router = APIRouter()
 
-# Stage order for initializing sprint stages
-STAGE_ORDER = [
-    StageType.primer,
-    StageType.micro_skills,
-    StageType.micro_drills,
-    StageType.guided_simulation,
-    StageType.independent_simulation,
-    StageType.replay_analysis,
-    StageType.reflection,
-    StageType.escalated_retry,
-    StageType.final_assessment,
-    StageType.report,
-    StageType.reinforcement,
-]
+
+def _stage_enum_values() -> set[str]:
+    return {s.value for s in StageType}
+
+
+def _stages_for_archetype(archetype: str) -> list[str]:
+    """Ordered stage keys for this archetype, filtered to valid DB enum values."""
+    allowed = _stage_enum_values()
+    flow = get_stage_flow(archetype)
+    return [s for s in flow if s in allowed]
 
 
 @router.get("", response_model=list[SprintResponse])
@@ -30,7 +27,6 @@ async def list_sprints(authorization: Optional[str] = Header(None)):
     if not supabase or not authorization:
         return []
 
-    # Verify user from JWT
     token = authorization.replace("Bearer ", "")
     user = supabase.auth.get_user(token)
     if not user or not user.user:
@@ -51,7 +47,7 @@ async def create_sprint(
     body: CreateSprintRequest,
     authorization: Optional[str] = Header(None),
 ):
-    """Create a new sprint for a skill."""
+    """Create a new sprint for a skill — stages follow the skill's archetype."""
     supabase = get_supabase()
     if not supabase or not authorization:
         skill_name = body.skill_id.replace("-", " ").title()
@@ -65,38 +61,47 @@ async def create_sprint(
             "target_hours": 20,
         }
 
-    # Verify user
     token = authorization.replace("Bearer ", "")
     user = supabase.auth.get_user(token)
     if not user or not user.user:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
-    # Verify skill exists
-    skill = supabase.table("skills").select("name").eq("id", body.skill_id).single().execute()
+    skill = (
+        supabase.table("skills")
+        .select("name, archetype, learning_engine_type")
+        .eq("id", body.skill_id)
+        .single()
+        .execute()
+    )
     if not skill.data:
         raise HTTPException(status_code=404, detail="Skill not found")
 
-    # Create sprint
+    archetype = archetype_from_skill(skill.data)
+    stage_flow = _stages_for_archetype(archetype)
+    if not stage_flow:
+        stage_flow = ["primer", "report"]
+
+    first_stage = stage_flow[0]
+
     sprint_data = {
         "user_id": user.user.id,
         "primary_skill_id": body.skill_id,
         "title": body.title or f"{skill.data['name']} Sprint",
         "status": "not_started",
-        "current_stage": "primer",
+        "current_stage": first_stage,
         "target_hours": 20,
     }
     sprint_result = supabase.table("sprints").insert(sprint_data).execute()
     sprint = sprint_result.data[0]
 
-    # Create all 11 stages
     stages = [
         {
             "sprint_id": sprint["id"],
-            "stage_key": stage.value,
+            "stage_key": stage_key,
             "sequence_number": i + 1,
             "status": "active" if i == 0 else "locked",
         }
-        for i, stage in enumerate(STAGE_ORDER)
+        for i, stage_key in enumerate(stage_flow)
     ]
     supabase.table("sprint_stages").insert(stages).execute()
 

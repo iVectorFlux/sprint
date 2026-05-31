@@ -6,6 +6,8 @@ import { api } from "@/lib/api";
 import { useSprintStore } from "@/stores/useSprintStore";
 import { useProgressStore } from "@/stores/useProgressStore";
 import { useSprintContext } from "@/hooks/useSprintContext";
+import { emitPracticeEvent } from "@/lib/telemetry";
+import { getSkillDNA } from "@/domain/goal-matching";
 import type { SkillTaxonomyEntry, SubSkillEntry } from "@/data/skills-taxonomy";
 
 interface PrimerCard {
@@ -100,6 +102,17 @@ export default function PrimerPage() {
       if (sprintId) setLoading(false);
       return;
     }
+
+    const dna = getSkillDNA(skill.name, skill.archetype);
+    void emitPracticeEvent({
+      event_type: "step_started",
+      sprint_id: sprintId,
+      skill_slug: skillSlug,
+      sub_skill_slug: subSkillSlug || undefined,
+      stage: "primer",
+      cognitive_patterns: dna.cognitive_patterns,
+    });
+
     // Track progress
     if (isSubSkillSprint) {
       startSubSkill(skillSlug, subSkillSlug);

@@ -6,13 +6,55 @@ This document captures the strategic direction for Lumi6: where the product is t
 
 ## Executive summary
 
-Lumi6 is evolving in three parallel directions:
+Lumi6 is evolving toward a **Human Capability Operating System**—not an LMS, coaching chatbot, or course platform, but measurable **behavioral transformation** driven by practice and evidence.
 
-1. **Skill Lab Canvas Engine** — Composable **learning primitives** assembled into bespoke **Learning Plans** (user-facing name for practice blueprints).
-2. **Learning Copilot (agent)** — Understands intent + full learner profile; designs unique step sequences; handles goals **outside** the fixed taxonomy when needed.
-3. **Human Development Graph** — Longitudinal learner model, uploads, integrations, event-driven growth and org export (manager / LMS).
+### Target flow (north star)
 
-**Moat hypothesis:** Simulations, content, and AI coaching will commoditize. What is hard to copy is **years of behavioral evidence** about how a specific person learns, fails, improves, and which interventions work for them.
+```text
+User Challenge
+        ↓
+Capability Inference
+        ↓
+Capability Graph (+ Skill DNA)
+        ↓
+Archetype / Session Engine
+        ↓
+Learning Plan Runtime
+        ↓
+Practice Primitives
+        ↓
+Telemetry
+        ↓
+Human Development Graph
+```
+
+### Three product pillars
+
+1. **Learning Plan runtime + primitives** — Composable practice blocks assembled into bespoke **Learning Plans** (practice blueprints executed in a lab shell; today’s archetype **sprints** are the live v1 of this).
+2. **Learning Copilot (agent)** — Resolves intent + learner profile into a plan; **most goals map to the stable capability graph**; novel ontology only when truly necessary (~10%).
+3. **Human Development Graph** — Longitudinal model, uploads, integrations, event-driven growth, org export. Answers *what interventions work for this person?*—not only *what skills do they have?*
+
+**Moat hypothesis:** Simulations, content, and agents will commoditize. What is hard to copy is **years of behavioral evidence** + intervention effectiveness + contextual performance (Challenge Graph over time).
+
+---
+
+
+## Simplified vocabulary (use in docs & code)
+
+Canonical glossary: **[docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)**. In roadmap text we prefer:
+
+| Say | Not (unless historical) |
+|-----|-------------------------|
+| **Skill** | capability (as a noun for catalog item) |
+| **Sprint** | skill lab session |
+| **Archetype** | session engine (in user-facing copy) |
+| **Stage** | primitive (for what exists today) |
+| **Practice pattern** | Skill DNA, cognitive pattern (UI) |
+| **Goal matching** | capability resolver |
+| **Practice block** | primitive (for future composable engine) |
+| **Custom plan** | learning plan, blueprint (future) |
+
+Code layout: business logic in `src/domain/` (e.g. `goal-matching/`); catalog in `src/data/`; sprint UI in `src/app/.../sprint/`.
 
 ---
 
@@ -27,7 +69,7 @@ Lumi6 is evolving in three parallel directions:
 | Stage UI | One Next.js route per screen family | `src/app/.../sprint/[id]/(stages)/*` |
 | Content AI | Generates primer, drills, scenarios, reasoning, reflection | `backend/app/routers/sprint_content.py` |
 | Practice AI | Multi-turn simulation, evaluation, reports | `sprint_simulation.py`, `sprint_evaluation.py` |
-| Discovery | “What do you want to learn?” → keyword match | `src/components/dashboard/LearningChatFAB.tsx` |
+| Discovery | “What do you want to learn?” → keyword match to catalog sprints | `src/components/dashboard/LearningComposer.tsx` |
 
 ### Archetypes (Phase 1)
 
@@ -80,6 +122,154 @@ The **tables exist**; the **event pipeline that fills them** is the main gap.
 
 ---
 
+## Part 1.5: Architecture review & refinements (May 2026)
+
+External architecture review validated the overall direction. The items below are **adopted refinements**—adjustments before large-scale build-out.
+
+### Verdict
+
+The platform path is correct:
+
+```text
+User Challenge → Capability Inference → Personalized Learning Plan → Practice → Telemetry → Longitudinal Growth Model
+```
+
+If executed well, Lumi6 competes on **outcomes and evidence**, not content libraries.
+
+### Refinement 1: Do not overuse novel ontology generation
+
+**Risk of “novel ontology for every goal”:** inconsistent skill definitions, unstable benchmarking, expensive runtime generation, weak cross-user comparability, difficult org reporting.
+
+**Policy:** Maintain a **stable capability graph**. Most learner goals resolve into **existing capabilities** (and shared **Skill DNA**—see below).
+
+| Target split | Approach |
+|--------------|----------|
+| **~90%** | Resolve intent → existing capabilities in taxonomy / graph |
+| **~10%** | Novel ontology pipeline (genuinely new domains only) |
+
+**Example**
+
+Input: *“I need to discuss GEO vs SEO budget allocation tomorrow.”*
+
+Resolve to capabilities:
+
+```text
+Communication · Judgment · Strategic Thinking · Influence
+```
+
+—not a one-off “GEO vs SEO” skill tree.
+
+The Copilot **assembles a Learning Plan** from primitives + profile; it does **not** mint a new global ontology unless the goal is a poor fit for the graph after inference.
+
+### Refinement 2: Introduce Skill DNA
+
+Skills and archetypes are not enough. Add **Skill DNA**—shared cognitive patterns and evaluation/telemetry dimensions that span skills.
+
+```json
+{
+  "skill": "Critical Thinking",
+  "archetype": "analytical",
+  "cognitive_patterns": [
+    "assumption_detection",
+    "evidence_evaluation",
+    "counterfactual_reasoning",
+    "causal_analysis"
+  ],
+  "evaluation_dimensions": ["reasoning_quality", "evidence_quality"],
+  "telemetry_dimensions": ["adaptability", "revision_speed"]
+}
+```
+
+**Why:** Critical Thinking, First Principles, Decision Making, and Root Cause Analysis all depend on **assumption_detection** and **evidence_evaluation**. Track atomic patterns across skills for stronger personalization and benchmarking.
+
+**Implementation note:** Extend taxonomy entries (or `skills` DB) with `cognitive_patterns[]`; blueprint compiler and growth layer read/write at pattern level, not only skill name.
+
+### Refinement 3: Build a Challenge Graph (future moat)
+
+Today: **Skill Graph** (mastery per skill).
+
+Complement with **Challenge Graph**—workplace situations the learner cares about:
+
+```text
+Challenge → Skills required → User performance over time → Improvement
+```
+
+Example:
+
+```text
+Executive Presentation — Mar: 42 · Apr: 61 · May: 81
+```
+
+Organizations often care about **performance on challenges** more than abstract scores like `Communication = 76`. Link challenges to capabilities inferred from practice + manager context.
+
+### Refinement 4: Reduce primitive complexity (v1 groups)
+
+The full primitive library (12+ types) is the long-term target; **v1 should ship grouped primitives** to avoid blueprint explosion and authoring/eval overhead.
+
+| Group | Primitives (v1) | Maps to later detail |
+|-------|-----------------|----------------------|
+| **Input** | Read, Watch, Listen | read + media variants |
+| **Thinking** | Analyze, Decide, Reflect, Create | annotate, categorize, canvas, reasoning |
+| **Practice** | Drill, Simulation, Investigation | existing engines + Q&A investigation |
+| **Output** | Artifact, Report | artifact, review, feedback |
+
+Expand granular types (annotate, prioritize, branching_scenario, etc.) when recipes and eval rubrics justify them.
+
+### Refinement 5: Archetypes = session engines (keep scaling rule)
+
+**100+ skills → 6 archetypes → 6 session engines** remains the scaling rule. Adding a skill should rarely require a new engine.
+
+| Archetype | Example skills |
+|-----------|----------------|
+| **Conversational** | Negotiation, conflict resolution, stakeholder management, executive communication |
+| **Analytical** | Critical thinking, decision making, first principles, problem solving |
+| **Reflective** | Self-awareness, empathy, resilience, emotional regulation |
+| **Systems** | Systems thinking, system design, process design |
+| **Creation / Performance** | (stubs today; same engine pattern when live) |
+
+### Refinement 6: Build order (runtime before Copilot)
+
+Recommended sequence to reduce architectural risk:
+
+| Phase | Build |
+|-------|--------|
+| **1** | Capability graph, Skill DNA, archetypes (align DB + taxonomy) |
+| **2** | Learning Plan runtime, primitive engine, telemetry contract |
+| **3** | Learning Copilot (catalog path first: resolve → plan) |
+| **4** | Human Development Graph (events, observations, recommendations) |
+| **5** | Novel goal pipeline (~10% path, guardrails, cost caps) |
+
+See **Part 6** for updated roadmap numbering aligned to this order.
+
+### Refinement 7: Human Development Graph = long-term moat
+
+Simulations, content, and generic agents commoditize. Durable advantage:
+
+```text
+Years of behavioral evidence
++ Learning history
++ Intervention effectiveness
++ Contextual performance data (challenges, uploads, org signals)
+```
+
+Product question to optimize for: **What interventions work best for this person?**—not only **What skills do they have?**
+
+### Refinement 8: Separate capability inference from learning delivery
+
+Avoid: `Skill → Course`.
+
+Prefer:
+
+```text
+Challenge → Capability Inference → Learning Plan → Practice → Feedback → Growth Model
+```
+
+**Capability inference** (resolver + graph + Skill DNA) is a distinct layer from **delivery** (runtime + primitives + session engines). The Copilot orchestrates both but should not collapse “what capabilities matter” into “what content to show” in one undifferentiated LLM call.
+
+---
+
+---
+
 ## Part 2: Vision — Skill Lab Canvas Engine
 
 ### Problem
@@ -97,7 +287,8 @@ A skill becomes metadata:
 ```json
 {
   "skill": "Bias Detection",
-  "requires": [
+  "archetype": "analytical",
+  "cognitive_patterns": [
     "evidence_evaluation",
     "assumption_testing",
     "alternative_hypothesis_generation"
@@ -105,9 +296,22 @@ A skill becomes metadata:
 }
 ```
 
+(`cognitive_patterns` = Skill DNA; shared across many skills—see Part 1.5.)
+
 A **blueprint compiler** (rules + optional LLM for content) maps requirements to primitives. This is **not** a free-form learning agent.
 
 ### Learning primitives (Lego blocks)
+
+**v1 grouped primitives** (ship first—see Part 1.5 Refinement 4):
+
+| Group | v1 | Purpose |
+|-------|-----|---------|
+| Input | Read, Watch, Listen | Consume scenario artifacts |
+| Thinking | Analyze, Decide, Reflect, Create | Structured cognition (maps to annotate, canvas, reasoning, etc.) |
+| Practice | Drill, Simulation, Investigation | Deliberate practice + multi-turn agents where needed |
+| Output | Artifact, Report | Produce work + debrief |
+
+**Full primitive library** (expand as recipes and eval mature):
 
 | # | Primitive | Purpose | Agent? |
 |---|-----------|---------|--------|
@@ -269,25 +473,27 @@ The plan is the bespoke workflow—not a fixed archetype sprint. Examples:
 | What is RAG / MCP (novel) | primer → micro_skills → flashcard → **learning_hub** (chat + diagrams) → micro_drill → applied simulation → report |
 | Executive presence (from 360) | read (uploaded review excerpts) → micro_drill → simulation → feedback |
 
-### Two paths: catalog skill vs novel goal
+### Capability inference first (then delivery)
 
 ```mermaid
 flowchart TB
-  I[Learner intent] --> C[Learning Copilot]
-  C --> M{In taxonomy?}
-  M -->|yes| T[Use skill + cognitive_requires + archetype defaults]
-  M -->|no / weak match| N[Novel skill pipeline]
+  I[Learner intent / Challenge] --> R[Capability Resolver]
+  R --> G[Capability Graph + Skill DNA]
+  G --> C[Learning Copilot]
+  C --> M{Strong graph match?}
+  M -->|~90% yes| T[Map to skills + cognitive_patterns + archetype]
+  M -->|~10% weak| N[Novel skill pipeline]
   T --> B[Learning Plan JSON]
-  N --> R[Research + ephemeral ontology]
-  R --> B
-  B --> L[Lab runtime]
-  L --> G[Growth + report + optional LMS/manager]
+  N --> R2[Bounded research + ephemeral ontology]
+  R2 --> B
+  B --> L[Learning Plan runtime]
+  L --> G2[Growth + report + optional LMS/manager]
 ```
 
 | Path | When | What happens |
 |------|------|----------------|
-| **A. Catalog** | Matches `SKILLS_TAXONOMY` / DB skill (e.g. Critical Thinking, Communication) | Copilot picks primitives + fills config from templates + learner context. May skip or repeat steps based on profile. |
-| **B. Novel** | No good match (e.g. “French culture”, “What is RAG / MCP?”, “Board presentation in healthcare”) | **Novel skill pipeline** (below)—taxonomy is a shortcut, not a prison. **Never respond with “we don’t have that skill.”** |
+| **A. Catalog / graph** | Intent resolves to existing capabilities (e.g. “GEO vs SEO budget” → Communication, Judgment, Strategic Thinking, Influence) | Resolver + Copilot pick primitives + configs from templates + learner context + Skill DNA gaps. May skip mastered patterns. |
+| **B. Novel (~10%)** | Genuinely new domain after resolver fails (e.g. niche technical stack, specialized culture depth) | **Novel skill pipeline** (below)—still lands in measurable primitives. **Never respond with “we don’t have that skill.”** Do **not** generate a new global ontology for every situational goal. |
 
 ### Product rule: always offer a path to learn
 
@@ -300,7 +506,9 @@ If the learner asks for something outside the catalog (technical concepts, cultu
 
 Soft skills lean on **simulation**. Knowledge topics (e.g. RAG, MCP) lean on **teach + explore + applied scenario**—same engine, different plan shape.
 
-### Novel skill pipeline (examples: “French culture”, “What is RAG / MCP?”)
+### Novel skill pipeline (~10% of goals)
+
+**Reserved for** goals that do not map cleanly to the capability graph after inference—not for every situational phrase (“budget meeting tomorrow”) that already decomposes into existing capabilities.
 
 When fixed skills are redundant or a poor fit:
 
@@ -837,6 +1045,24 @@ This extends the **Human Development Graph** with **organizational context**—t
 
 ## Part 6: Phased implementation roadmap
 
+### Implementation progress (living)
+
+| Item | Status | Notes |
+|------|--------|-------|
+| Skill DNA (TS) | ✅ Done | `src/lib/capability/skill-dna.ts`, `cognitive-patterns.ts` |
+| Capability resolver (rules) | ✅ Done | `src/lib/capability/resolver.ts` |
+| Learning Composer → resolver | ✅ Done | `LearningComposer.tsx` |
+| Telemetry contract (TS) | ✅ Done | `src/types/telemetry.ts` |
+| Challenge entity (TS + DB) | ✅ Done | `src/types/challenge.ts`, migration `011_skill_dna_and_challenges.sql` |
+| `toSlug` server-safe util | ✅ Done | `src/lib/slug.ts` |
+| DB archetype + Skill DNA columns | ✅ Migrations `011` + `012` (sync DNA by skill name) |
+| Sprint stages = archetype flow at create | ✅ Done | `backend/app/routers/sprints.py` uses `get_stage_flow` |
+| Redis simulation sessions | ✅ Done | Upstash REST — `simulation_session_store.py` |
+| Practice blocks + telemetry API (Phase 2 start) | ✅ Done | `domain/practice/`, `telemetry` + `challenges` routers |
+| Learning Copilot API (Phase 4) | ⬜ Pending | |
+
+**Build order** follows Part 1.5 Refinement 6: **capability graph → runtime → Copilot (catalog) → Human Development Graph → novel goals (~10%)**.
+
 ### Phase 0 — Align foundations (2–3 weeks)
 
 | Task | Outcome |
@@ -844,84 +1070,93 @@ This extends the **Human Development Graph** with **organizational context**—t
 | Migrate DB: `skills.archetype`, map `learning_engine_type` | Single source of truth |
 | Sprint stages = archetype `stage_flow` at create time | DB matches nav |
 | Nullable `practice_blueprint_id` on sprint | Forward-compatible |
-| Telemetry contract per primitive (design doc) | Enables eval |
+| **Skill DNA** fields on taxonomy / `skills` (`cognitive_patterns`, eval + telemetry dims) | ✅ TS + migration `011`; wire DB seed next |
+| **Capability resolver** (rules + optional LLM): intent/challenge → graph skills + patterns | ✅ `src/lib/capability/resolver.ts`; LLM later |
+| Telemetry contract per primitive (design doc) | ✅ `src/types/telemetry.ts` |
 | **Redis** for simulation sessions (replace in-memory `_sessions`) | Production-ready practice agents |
 
-### Phase 1 — Primitive library v1 + lab runtime (4–6 weeks)
+### Phase 1 — Capability graph + live sprint engines (ongoing; extend current product)
 
-Build: `read`, `annotate`, `prioritize`, `feedback`
+| Task | Outcome |
+|------|---------|
+| Keep **archetype sprints** as primary delivery (`/dashboard/sprint/[id]`) | Real practice today |
+| Dashboard **Learning Composer** → catalog sprint match (no fake fallbacks) | ✅ Capability resolver + pattern hints |
+| Document `cognitive_patterns` per skill in taxonomy | ✅ `skill-dna.ts` per skill + archetype defaults |
+| Challenge entity (schema + UI sketch): user-stated workplace goals | ✅ Composer saves challenges via API |
 
-New route: `/sprint/[id]/lab/[sessionId]` renders `PracticeBlueprint` steps.
+### Phase 2 — Learning Plan runtime + primitive engine (4–6 weeks)
 
-Pilot blueprints (hand-authored JSON):
+Ship **grouped v1 primitives** (Input / Thinking / Practice / Output—Part 1.5):
 
-- Bias Detection
-- Product Prioritization (subset)
-- Root Cause Analysis (investigation stub as Q&A first)
+- Implement behind existing stages where possible (reasoning = Analyze; drills = Drill; sim = Simulation)
+- New lab route when ready: plan steps rendered by runtime (reuse sprint stage wrappers as adapters first)
+- Pilot hand-authored plans: Bias Detection, Prioritization subset, RCA (investigation as Q&A stub)
+- Emit telemetry per step for eval and future Challenge Graph scores
 
-**No growth agent required for Phase 1.**
+**No Copilot v1 required.** **No growth agent required.**
 
-### Phase 2 — Expand primitives (6–8 weeks)
+### Phase 3 — Expand primitives + recipes (6–8 weeks)
 
-`investigation`, `decision`, `categorize`, `canvas` (MVP), `branching_scenario`, `artifact`, `review`
+Granular types as needed: annotate, prioritize, canvas MVP, branching_scenario, artifact, review, flashcard, quick_sprint.
+
+| `cognitive_patterns` (Skill DNA) | Default sequence |
+|----------------------------------|------------------|
+| evidence_evaluation, assumption_testing | read → analyze → decide → report |
+| prioritization, tradeoff_analysis | read → analyze → artifact → report |
+| root_cause, hypothesis_generation | read → investigation → analyze → decide |
+| dialogue, pushback | read → simulation → report |
 
 Wrap simulation as a primitive step; migrate conversational flows gradually.
 
-### Phase 3 — Learning Copilot + Learning Plans (4–6 weeks)
+### Phase 4 — Learning Copilot (catalog path) (4–6 weeks)
 
-- **Learning Copilot** UI (replace/upgrade Learning Guide FAB)
-- `POST /learning-plans/assemble` — catalog path: intent + profile → `LearningPlan` JSON
-- Lab runtime executes plan steps (reuse Phase 1 primitives + legacy stage wrappers)
+**After runtime exists**—Copilot authors plans; runtime executes them.
+
+- Upgrade dashboard composer → full Copilot intake (clarify, preview plan)
+- `POST /learning-plans/assemble` — **capability resolver** + profile → `LearningPlan` JSON (~90% catalog/graph)
 - User confirms / edits plan before start
-- Recipe table: `cognitive_requires` → default sequences; Copilot overrides from profile
+- Recipe table: `cognitive_patterns` → default sequences; Copilot overrides from profile
 - LLM fills per-step `config` only, constrained by JSON schema
+- Separate **inference** service from **delivery** (resolver API ≠ content generation API)
 
-### Phase 3b — Novel goals (4–6 weeks, after Copilot v1)
-
-- Weak taxonomy match → **novel skill pipeline** (research + ephemeral ontology)
-- Primitives: add `flashcard`, `quick_sprint` for knowledge-heavy custom goals
-- Scope guardrails + plan preview + cost caps
-- Optional: promote repeated custom goals to catalog
-
-Example recipes:
-
-| `cognitive_requires` | Default sequence |
-|----------------------|------------------|
-| evidence_evaluation, assumption_testing | read → annotate → decision → feedback |
-| prioritization, tradeoff_analysis | read → prioritize → artifact → feedback |
-| root_cause, hypothesis_generation | read → investigation → canvas → decision |
-| dialogue, pushback | read → simulation → review → feedback |
-
-### Phase 4 — Personal Growth pipeline (parallel / after Phase 1 events exist)
+### Phase 5 — Human Development Graph (4–8 weeks; events can start during Phase 2)
 
 | Step | Build |
 |------|--------|
 | 1 | Events: `simulation_end`, `report_generated` → observations → profile + `memory_nodes` (**structured, no embeddings**) |
-| 2 | Recommendation API — next skill / drill / sprint (rules-first) |
-| 3 | Weekly digest email — template + one personalized line |
-| 4 | Outcome tracking — intervention effectiveness |
-| 5 | Engagement channels (email first; Slack/Teams later) |
-| 6 | **Growth v2:** async embed on memory write + pgvector retrieval for debrief / coach (see Part 4) |
+| 2 | Recommendation API — next skill / drill / sprint / challenge (rules-first; pattern-level gaps) |
+| 3 | **Intervention effectiveness** — which plan shapes improved which patterns |
+| 4 | Weekly digest email — template + one personalized line |
+| 5 | **Challenge Graph** v1 — score challenges over time from practice + self/manager input |
+| 6 | **Growth v2:** async embed on memory write + pgvector retrieval (see Part 4) |
 
-### Phase 4b — External context (uploads first, integrations later)
+### Phase 5b — External context (uploads first, integrations later)
 
 | Step | Build |
 |------|--------|
-| 1 | **Learner upload** — PDF/DOCX → parse → classify → extract → `memory_nodes` (wire existing `uploaded_documents`) |
-| 2 | **Admin/planner upload** — upload on behalf of learner; `subject_user_id`, consent, visibility RLS |
-| 3 | **Learner context UI** — “What we know about you” + sources (practice vs upload vs manager) |
-| 4 | Use extracted gaps in **blueprint / scenario generation** (role-aware prompts) |
-| 5 | **HRIS / LMS** — read-only sync (role, completions) via OAuth + nightly job |
-| 6 | **Slack / Teams** — nudges + deep links only; no broad message scraping in v1 |
-| 7 | Enterprise admin: integration settings, sync logs, data retention policies |
+| 1 | **Learner upload** — PDF/DOCX → parse → classify → extract → `memory_nodes` |
+| 2 | **Admin/planner upload** — consent, visibility RLS |
+| 3 | **Learner context UI** — “What we know about you” + sources |
+| 4 | Use extracted gaps in **plan / scenario generation** |
+| 5 | **HRIS / LMS** — read-only sync via OAuth + nightly job |
+| 6 | **Slack / Teams** — nudges + deep links only |
+| 7 | Enterprise admin: integration settings, sync logs, retention |
 
-### Phase 5 — Scale & governance (ongoing)
+### Phase 6 — Novel goals pipeline (~10%) (4–6 weeks, after Copilot catalog path)
+
+- Only when **capability resolver** confidence is low
+- Bounded research + **ephemeral ontology** (session-scoped, optional promote to catalog)
+- Scope guardrails + plan preview + cost caps
+- Primitives: flashcard, learning_hub for knowledge-heavy goals
+- **Do not** replace graph resolution for situational goals that already map to existing capabilities
+
+### Phase 7 — Scale & governance (ongoing)
 
 - Blueprint versioning and A/B sequences
 - Authoring UI for L&D (visual blueprint composer)
 - Per-primitive eval rubrics
 - Shared content library (reusable artifacts)
-- Human Development Graph analytics for orgs
+- Human Development Graph + Challenge Graph analytics for orgs
 
 ---
 
@@ -929,12 +1164,17 @@ Example recipes:
 
 | Topic | Recommendation |
 |-------|----------------|
+| Novel ontology | **~10% only**; default to capability resolver + graph; avoid per-goal skill trees |
+| Skill DNA | Track `cognitive_patterns` across skills; don’t personalize on skill name alone |
+| Challenge Graph | Store user challenges early; score over time for org value |
+| Primitive scope | Ship **grouped v1** (Input/Thinking/Practice/Output); defer granular types until recipes stable |
 | Canvas scope | Sticky-note MVP before full whiteboard (Excalidraw/tldraw) |
-| Authoring | JSON blueprints first; visual composer in Phase 5 |
+| Authoring | JSON blueprints first; visual composer in Phase 7 |
+| Build order | **Runtime before Copilot**; HDG before novel pipeline |
 | Eval budget | Rubric + telemetry per primitive; cap LLM eval calls |
 | Mobile | Desktop-first for drag-drop and canvas |
 | Enterprise | Guardrails on generated scenarios and “internal” documents |
-| Naming | “Blueprint compiler” / “Learner Model Service” vs overloaded “AI agent” |
+| Naming | “Capability resolver” / “Blueprint compiler” / “Learner Model Service” vs overloaded “AI agent” |
 | Vector / memory | Postgres pgvector first; embed summaries not every chat turn |
 | Agent frameworks | Handlers + Pydantic before LangGraph unless complexity forces it |
 
@@ -949,7 +1189,9 @@ Example recipes:
 | **Learning Copilot + plans** | Bespoke primitive sequences for any goal | **High** — profile + planning quality |
 | **Human Development Graph** | Longitudinal learner model + uploads + integrations | **High** — time + behavioral data + outcome linkage |
 
-**One-line pitch:** Tell Lumi6 what you want to learn—the Copilot builds your practice plan from who you are, you execute it through simulations and drills, and the platform remembers what works and plans what’s next—not an LMS with a chatbot that writes courses.
+**One-line pitch:** Bring a workplace challenge—Lumi6 infers the capabilities that matter, builds a practice plan from who you are, you prove it in simulations and drills, and the platform remembers which interventions work—not an LMS with a chatbot that writes courses.
+
+**Category:** Human Capability Operating System (behavioral transformation + evidence), not content consumption.
 
 ---
 
@@ -983,4 +1225,4 @@ Agents should grep + open one module, not entire trees.
 
 ---
 
-*Last updated: May 2026 — includes Learning Copilot, bespoke Learning Plans, novel-goal pipeline, agent surfaces map.*
+*Last updated: May 2026 — Phase 0/1 foundation started (capability resolver, Skill DNA, telemetry types, challenge schema). Architecture review refinements (Skill DNA, Challenge Graph, 90/10 capability resolution, runtime-before-Copilot roadmap).*

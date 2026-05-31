@@ -2,6 +2,8 @@
 from __future__ import annotations
 from typing import Optional
 
+from app.services.learner_context import format_personalization_block
+
 def primer_cards_prompt(
     skill_name: str,
     sub_skills: list[str],
@@ -66,6 +68,7 @@ def primer_cards_prompt(
             "Card 3: Common pitfalls professionals face regarding this sub-skill\n"
             "Card 4: What they'll practice in this sprint (focusing on its atomic building blocks)\n"
             "Card 5: Their measurable goal for this sub-skill sprint"
+            f"{format_personalization_block(user_context)}"
         )
     else:
         user = (
@@ -89,6 +92,7 @@ def primer_cards_prompt(
             "Card 3: Common pitfalls professionals face\n"
             "Card 4: What they'll practice in this sprint\n"
             "Card 5: Their measurable goal for this sprint"
+            f"{format_personalization_block(user_context)}"
         )
     return system, user
 
@@ -233,6 +237,7 @@ def drills_prompt(
             '    }\n'
             '  ]\n'
             '}'
+            f"{format_personalization_block(user_context)}"
         )
     else:
         user = (
@@ -255,6 +260,7 @@ def drills_prompt(
             '    }\n'
             '  ]\n'
             '}'
+            f"{format_personalization_block(user_context)}"
         )
     return system, user
 
@@ -305,6 +311,8 @@ def scenarios_prompt(
         '}\n\n'
         f"Make scenarios relevant to a {user_context.get('role', 'Professional')} "
         f"in {user_context.get('industry', 'a corporate environment')}."
+        " Tie at least one scenario to their stated learning goals or recent challenges when provided."
+        f"{format_personalization_block(user_context)}"
     )
     return system, user
 
