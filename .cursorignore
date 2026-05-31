@@ -1,0 +1,26 @@
+# Token-efficient indexing — see AGENTS.md. @path still works for ignored files.
+
+node_modules/
+.next/
+out/
+.venv/
+__pycache__/
+*.pyc
+dist/
+build/
+coverage/
+.vercel/
+
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+futureplan.md
+DESIGN.md
+
+supabase/migrations/011_seed_skills.sql
+
+next-env.d.ts
+*.tsbuildinfo
+
+src/lib/drills/fallback-drills.ts

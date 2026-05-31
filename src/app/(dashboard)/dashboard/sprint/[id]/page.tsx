@@ -8,10 +8,7 @@ import {
   ARCHETYPE_STAGE_FLOWS,
 } from "@/types";
 import BeginSprintButton from "@/components/sprint/BeginSprintButton";
-
-function toSlug(name: string): string {
-  return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-}
+import { toSlug } from "@/hooks/useSprintContext";
 
 export default async function SprintDetailPage({
   params,

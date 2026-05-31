@@ -3,6 +3,7 @@ import { getCurrentUser, getActiveSprint, getUserSprints, getUserSkillMastery } 
 import { SKILLS_TAXONOMY } from "@/data/skills-taxonomy";
 import { STAGE_LABELS } from "@/types";
 import type { StageType } from "@/types";
+import LearningComposer from "@/components/dashboard/LearningComposer";
 
 export default async function DashboardPage() {
   const user = await getCurrentUser();
@@ -39,8 +40,13 @@ export default async function DashboardPage() {
             ? "Continue your learning journey. You have an active sprint in progress."
             : sprints.length > 0
               ? "Welcome back. Browse the catalog to start a new sprint."
-              : "Welcome to Lumi6 Skill Lab. Start by exploring the Skills Catalog."}
+              : "Welcome to Lumi6. Start by exploring the Skills Catalog."}
         </p>
+      </section>
+
+      {/* Learning goal composer — primary entry point */}
+      <section>
+        <LearningComposer />
       </section>
 
       {/* Stats Grid */}

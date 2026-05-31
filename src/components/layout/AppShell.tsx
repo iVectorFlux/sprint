@@ -4,7 +4,6 @@ import { useState } from "react";
 import { usePathname } from "next/navigation";
 import Sidebar from "@/components/layout/Sidebar";
 import TopBar from "@/components/layout/TopBar";
-import LearningChatFAB from "@/components/dashboard/LearningChatFAB";
 
 const PAGE_TITLES: Record<string, string> = {
   "/dashboard": "Dashboard",
@@ -48,7 +47,6 @@ export default function AppShell({ children, userName, userRole }: AppShellProps
           {children}
         </main>
       </div>
-      <LearningChatFAB />
     </div>
   );
 }

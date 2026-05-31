@@ -10,10 +10,11 @@ Lumi6 is evolving along two tracks (see **[futureplan.md](./futureplan.md)** for
 
 **Today:** Skills map to **archetypes** (conversational, analytical, reflective, …), each with a fixed stage flow—primer, micro-skills, drills, simulation or reasoning workspace, reflection, report.
 
-**Next:** **Composable learning primitives** (read, annotate, prioritize, canvas, investigation, simulation, …) assembled into **practice blueprints** so skills like bias detection, root cause analysis, or prioritization get the right interaction sequence—not a one-size-fits-all analytical screen.
+**Next:** **Composable learning primitives** (primer, drills, flashcards, simulation, reasoning, reflection, …) assembled into **Learning Plans**—bespoke sequences per learner and goal.
 
-- Path assembly = **blueprint compiler** (rules + structured content generation), not a chat agent that invents courses.
-- **Real agents** are reserved for **simulation** and **investigation**—where the situation reacts turn-by-turn.
+- **Learning Copilot (agent)** — understands intent + full profile; designs the plan (catalog skill or **novel goal** e.g. a custom topic outside the taxonomy).
+- **Lab runtime** executes each step; **real agents** inside simulation and investigation only.
+- Path assembly is a **Copilot burst + JSON plan**, not an always-on tutor.
 
 ### 2. Human Development Graph (longitudinal moat)
 
@@ -121,7 +122,8 @@ All AI calls go through `backend/app/ai/llm.py` (OpenAI-compatible APIs).
 
 ## Documentation
 
-- **[futureplan.md](./futureplan.md)** — Canvas engine primitives, blueprint model, agent boundaries, **agent/memory tech stack** (Redis, pgvector, when to embed), growth layer, phased roadmap, and technical debt
+- **[AGENTS.md](./AGENTS.md)** — **Start here for AI coding agents** (task → files map, token-saving rules)
+- **[futureplan.md](./futureplan.md)** — Product roadmap (`@futureplan.md` in Cursor; excluded from default index via `.cursorignore`)
 
 ---
 

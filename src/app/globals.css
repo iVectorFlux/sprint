@@ -117,8 +117,12 @@
   --transition-base: 200ms ease;
   --transition-slow: 350ms ease;
 
-  /* --- Shapes (0px — strictly sharp) --- */
+  /* --- Shapes --- */
+  /* Surfaces (cards, inputs, progress) stay strictly sharp. */
   --radius: 0px;
+  /* Interactive buttons use rounded corners (see DESIGN.md → Buttons). */
+  --radius-btn: 12px;
+  --radius-pill: 999px;
 }
 
 /* ============================================================
@@ -312,12 +316,17 @@ a:hover {
   letter-spacing: 0.02em;
   padding: 12px 28px;
   border: 1px solid transparent;
-  border-radius: var(--radius);
+  border-radius: var(--radius-btn);
   cursor: pointer;
   transition: all var(--transition-fast);
   text-decoration: none;
   white-space: nowrap;
   user-select: none;
+}
+
+/* Fully rounded pill — use for primary CTAs and prominent actions. */
+.btn-pill {
+  border-radius: var(--radius-pill);
 }
 
 .btn:focus-visible {
@@ -387,11 +396,33 @@ a:hover {
   padding: 16px 36px;
 }
 
-/* Icon button */
+/* Icon button — rounded square by default */
 .btn-icon {
   padding: 10px;
   width: 40px;
   height: 40px;
+  border-radius: var(--radius-btn);
+}
+
+/* Circular icon button (e.g. composer attach / mic) */
+.btn-round {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-pill);
+  background-color: var(--surface-container);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-round:hover {
+  border-color: var(--primary-container);
+  color: var(--primary-container);
 }
 
 /* ============================================================
@@ -499,6 +530,75 @@ a:hover {
 .textarea {
   min-height: 120px;
   resize: vertical;
+}
+
+/* ============================================================
+   8b. COMPONENT: LEARNING COMPOSER (dashboard goal input)
+   ============================================================ */
+
+.composer {
+  background-color: var(--surface-bright);
+  border: 1px solid var(--border-medium);
+  border-radius: 16px;
+  padding: 18px 20px 14px;
+  transition: border-color var(--transition-base);
+}
+
+.composer:focus-within {
+  border-color: var(--primary-container);
+}
+
+.composer-input {
+  display: block;
+  width: 100%;
+  margin: 0;
+  border: none;
+  outline: none;
+  box-shadow: none;
+  resize: none;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  font-family: var(--font-ui);
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--text-heading);
+  /* Auto-grown via JS; comfortable starting height, scrolls past max. */
+  height: 28px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.composer-input:focus,
+.composer-input:focus-visible {
+  border: none;
+  outline: none;
+  box-shadow: none;
+}
+
+.composer-input::placeholder {
+  color: var(--text-muted);
+}
+
+.composer-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.composer-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.composer-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
 }
 
 /* ============================================================
@@ -1709,162 +1809,6 @@ a:hover {
 .drill-timer-danger {
   border-color: var(--error);
   color: var(--error);
-}
-
-/* ============================================================
-   LEARNING CHAT FAB
-   ============================================================ */
-
-.learning-chat-fab {
-  position: fixed;
-  bottom: 32px;
-  right: 32px;
-  width: 56px;
-  height: 56px;
-  background-color: var(--primary-container);
-  color: var(--on-primary);
-  border: none;
-  border-radius: 0;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-  transition: all var(--transition-base);
-  z-index: 1000;
-}
-
-.learning-chat-fab:hover {
-  background-color: var(--brand-hover);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 28px rgba(0, 0, 0, 0.2);
-}
-
-.learning-chat-panel {
-  position: fixed;
-  bottom: 32px;
-  right: 32px;
-  width: 420px;
-  max-height: 560px;
-  background-color: var(--surface-bright);
-  border: 1px solid var(--border-subtle);
-  display: flex;
-  flex-direction: column;
-  z-index: 1001;
-  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.12);
-  animation: chat-slide-up 0.25s ease-out;
-}
-
-@keyframes chat-slide-up {
-  from {
-    opacity: 0;
-    transform: translateY(16px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.learning-chat-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border-subtle);
-  background-color: var(--surface-container-low);
-}
-
-.learning-chat-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px;
-}
-
-.learning-chat-step {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.learning-chat-bubble {
-  padding: 14px 16px;
-  font-size: 14px;
-  line-height: 1.6;
-}
-
-.learning-chat-bubble p {
-  margin: 0;
-}
-
-.learning-chat-bubble-ai {
-  background-color: var(--surface-container);
-  border-left: 3px solid var(--primary-container);
-}
-
-.learning-chat-bubble-user {
-  background-color: var(--primary-fixed);
-  border-left: 3px solid var(--primary-fixed-dim);
-  font-weight: 500;
-}
-
-.learning-chat-input-row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.learning-chat-input {
-  flex: 1;
-  font-family: var(--font-ui);
-  font-size: 14px;
-  padding: 10px 14px;
-  border: 1px solid var(--border-medium);
-  background-color: var(--surface-bright);
-  color: var(--on-surface);
-  outline: none;
-  transition: border-color var(--transition-fast);
-}
-
-.learning-chat-input:focus {
-  border-color: var(--primary-container);
-}
-
-.learning-chat-input::placeholder {
-  color: var(--text-muted);
-}
-
-.learning-chat-match {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 14px;
-  background-color: var(--surface-bright);
-  border: 1px solid var(--border-subtle);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  width: 100%;
-}
-
-.learning-chat-match:hover {
-  border-color: var(--primary-container);
-  background-color: var(--surface-container-low);
-}
-
-@media (max-width: 480px) {
-  .learning-chat-panel {
-    bottom: 0;
-    right: 0;
-    left: 0;
-    width: 100%;
-    max-height: 80vh;
-    border-bottom: none;
-  }
-
-  .learning-chat-fab {
-    bottom: 20px;
-    right: 20px;
-  }
 }
 
 /* ============================================================

@@ -151,11 +151,19 @@ This design system uses a **flat, layered surface model** instead of traditional
 
 ## Shapes
 
-The shape language is **Strictly Sharp (0px)**. All containers, buttons, inputs, and progress bars must have 0px border-radii. This geometric precision communicates professionalism, technical accuracy, and a disciplined academic tone.
+The shape language is **Sharp surfaces, rounded actions**.
+
+- **Surfaces** — containers, cards, inputs, progress bars, chips, and guidance boxes remain **strictly sharp (0px radius)** via `--radius`. This geometric precision communicates professionalism and a disciplined academic tone.
+- **Buttons & interactive controls** — use **rounded corners** to feel tactile and clickable. Tokens:
+  - `--radius-btn: 12px` — default for all `.btn` and `.btn-icon`.
+  - `--radius-pill: 999px` — fully rounded; use `.btn-pill` for primary CTAs (e.g. "Start Plan") and `.btn-round` for circular icon buttons (e.g. composer attach / mic).
+
+This sharp-surface / rounded-action contrast is the consistent pattern across the product: structure stays crisp, while the things you press are soft and inviting.
 
 ## Components
 
--   **Buttons:** Rectangular with 1px borders. Primary buttons use #1B2A4A fill with white text. Ghost buttons use #D8D6D0 borders with #2C2A25 text. Hover states involve a slight darkening of the fill or border.
+-   **Buttons:** **Rounded** (12px) with 1px borders. Primary buttons use #1B2A4A fill with white text; prominent CTAs use the fully-rounded `.btn-pill`. Ghost buttons use #D8D6D0 borders with #2C2A25 text. Icon-only buttons use `.btn-round` (circular). Hover states involve a slight darkening of the fill or border.
+-   **Composer:** The dashboard learning-goal input (`.composer`) is a rounded container with a borderless multiline input, a left cluster of circular `.btn-round` tools (attach a report/summary document, voice), and a right-aligned `.btn-pill.btn-primary` "Start Plan" action. Attached files render as `.chip` tags above the toolbar. This is the canonical entry point for describing what you want to learn.
 -   **Cards:** Use #FFFFFF background with a 1px #E5E3DE border. No shadows. Vertical stacking of information within cards should be separated by 1px dividers.
 -   **Inputs:** Textareas and inputs use #FFFFFF backgrounds with a 1px #D8D6D0 border. Focus states should thicken the border or use the primary navy to highlight the active area.
 -   **Progress Indicators:** Linear bars with a 0px radius. The track uses #E5E3DE and the fill uses the brand primary navy (#1B2A4A). Use the Success green for completed or high-achievement states.
