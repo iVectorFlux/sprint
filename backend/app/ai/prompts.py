@@ -47,7 +47,10 @@ def primer_cards_prompt(
     system = (
         "You are Lumi6, an AI-native learning platform. Generate exactly 5 primer cards "
         "that introduce a workplace skill. Each card should build understanding progressively. "
-        f"{archetype_context} "
+        f"{archetype_context}\n"
+        "CRITICAL WRITING RULE:\n"
+        "Do NOT write seniority fluff or intro sentences like 'As a mid-level professional in the corporate industry...' or mention titles/seniority. "
+        "Explain concepts and details objectively and directly.\n"
         "Respond ONLY with valid JSON."
     )
     
@@ -72,9 +75,9 @@ def primer_cards_prompt(
             '    }\n'
             '  ]\n'
             '}\n\n'
-            "Card 1: Why this sub-skill matters for their specific role\n"
-            "Card 2: The science/research behind deliberate practice for this sub-skill\n"
-            "Card 3: Common pitfalls professionals at their level face regarding this sub-skill\n"
+            "Card 1: What is this sub-skill (a clear, direct, quick brief on what it is and what it comprises)\n"
+            "Card 2: Why this matters now for modern workplace collaboration and effectiveness\n"
+            "Card 3: Common pitfalls professionals face regarding this sub-skill\n"
             "Card 4: What they'll practice in this sprint (focusing on its atomic building blocks)\n"
             "Card 5: Their measurable goal for this sub-skill sprint"
         )
@@ -95,9 +98,9 @@ def primer_cards_prompt(
             '    }\n'
             '  ]\n'
             '}\n\n'
-            "Card 1: Why this skill matters for their specific role\n"
-            "Card 2: The science/research behind deliberate practice for this skill\n"
-            "Card 3: Common pitfalls professionals at their level face\n"
+            "Card 1: What is this skill (a clear, direct, quick brief on what it is and what it comprises)\n"
+            "Card 2: Why this matters now for modern workplace collaboration and effectiveness\n"
+            "Card 3: Common pitfalls professionals face\n"
             "Card 4: What they'll practice in this sprint\n"
             "Card 5: Their measurable goal for this sprint"
         )
